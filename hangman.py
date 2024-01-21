@@ -1,5 +1,5 @@
-import os
-from faker import Faker
+import os # To clean cmd
+from faker import Faker # To generate the word
 
 hangman = (''' ------
  |    |
@@ -60,7 +60,6 @@ hangman = (''' ------
            )
 
 loss = win = streak = 0
-win_or_loss = '0'
 
 
 def generate_word():
@@ -68,14 +67,16 @@ def generate_word():
     word = fake.word()
     while len(word) < 7:
         word = fake.word()
+    print(word)
     return word
 
 
 def main():
-    win_or_loss = '0'
+
+    win_or_loss = 0
     print('Welcome to Hangman!')
 
-    word = generate_word()
+    word = generate_word() # Call function generate_word
 
     max_wrong_guesses = len(hangman)
     wrong_guesses = 0
@@ -86,8 +87,6 @@ def main():
 
     while wrong_guesses < max_wrong_guesses:
 
-        # It should be between used.append(guess) and k += 1,
-        # but since I wanted to implement console clearing I had to move it here.
         if guess in word:
             print('The letter \'{}\' is in the word'.format(guess))
             new = ''
@@ -130,14 +129,14 @@ def main():
         print(hangman[wrong_guesses])
         print('You guessed the word!')
         print('The target word is \'{}\'.'.format(word))
-        win_or_loss = '1'
+        win_or_loss = 1
 
     return win_or_loss
 
 
 while True:
     win_or_loss = main()
-    if win_or_loss == '1':
+    if win_or_loss == 1:
         win += 1
         streak += 1
     else:
