@@ -67,7 +67,6 @@ def generate_word():
     word = fake.word()
     while len(word) < 7:
         word = fake.word()
-    print(word)
     return word
 
 
