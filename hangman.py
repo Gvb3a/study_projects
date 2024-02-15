@@ -1,5 +1,5 @@
-import os # To clean cmd
-from faker import Faker # To generate the word
+import os  # To clean cmd
+from faker import Faker  # To generate the word
 
 hangman = (''' ------
  |    |
@@ -63,19 +63,17 @@ loss = win = streak = 0
 
 
 def generate_word():
-    fake = Faker()
-    word = fake.word()
+    word = Faker().word()
     while len(word) < 7:
-        word = fake.word()
+        word = Faker().word()
     return word
 
 
 def main():
 
-    win_or_loss = 0
     print('Welcome to Hangman!')
 
-    word = generate_word() # Call function generate_word
+    word = generate_word()  # Call function generate_word
 
     max_wrong_guesses = len(hangman)
     wrong_guesses = 0
@@ -87,7 +85,7 @@ def main():
     while wrong_guesses < max_wrong_guesses:
 
         if guess in word:
-            print('The letter \'{}\' is in the word'.format(guess))
+            print(f'The letter \'{guess}\' is in the word')
             new = ''
             for i in range(len(word)):
                 if guess == word[i]:
@@ -95,7 +93,7 @@ def main():
                 else:
                     new += dashes[i]
             dashes = new
-        elif True and k != 0:
+        elif k != 0:
             print('Wrong guess. The letters \'{}\' are not in the word'.format(guess))
             wrong_guesses += 1
 
@@ -124,13 +122,12 @@ def main():
         print(hangman[max_wrong_guesses - 1])
         print('Word:', word)
         print('You\'re hanged')
+        return 0
     else:
         print(hangman[wrong_guesses])
         print('You guessed the word!')
         print('The target word is \'{}\'.'.format(word))
-        win_or_loss = 1
-
-    return win_or_loss
+        return 1
 
 
 while True:
