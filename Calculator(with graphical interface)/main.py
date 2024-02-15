@@ -156,8 +156,8 @@ class Calculator(QMainWindow):
             expression = self.ui.lineEdit.text().replace('^', '**').replace("pi", "3.14159265358979323846").replace(')(', ')*(').replace('///', '%')
             for i in range(10):
                 expression = expression.replace(f'{i}(', f'{i}*(')
-            # if the equation
-            if expression.find('x') > -1 and expression.find('Error') == -1:
+                
+            if 'x' in expression and 'Error' not in expression:  # if the equation
                 transformations = (standard_transformations + (implicit_multiplication_application,))
                 if ">" not in expression and "<" not in expression:
                     op = "x = "
@@ -166,13 +166,13 @@ class Calculator(QMainWindow):
                 f = parse_expr(expression.replace("=", "-"), transformations=transformations)
                 answer = str(solve(f)).replace('&', '∪').replace('oo', '∞').replace('((', '(').replace('))', ')')
                 if answer[0] == '[' and answer[len(answer) - 1] == ']' and answer != '[]':
-                    self.ui.lineEdit.setText(op + answer[1:len(answer) - 1])
+                    self.ui.lineEdit.setText(op + answer[1: -1])
                 elif answer == '[]':
                     self.ui.lineEdit.setText('x ∈ R')
                 else:
                     self.ui.lineEdit.setText('x ∈ ' + answer.replace(' < x) ∪ (x < ', '; ').replace('|', '∪'))
             # if x is of degree zero
-            elif expression.find('x') == -1 and expression.find('Error') == -1:
+            elif 'x' not in expression and 'Error' not in expression:
                 expression = expression.replace('=', '==')
                 ops = {
                     ">=": operator.ge,
