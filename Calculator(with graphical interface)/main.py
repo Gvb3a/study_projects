@@ -149,13 +149,13 @@ class Calculator(QMainWindow):
 
 
 
-    def main(self) -> None: # start calculating
+    def main(self) -> None:  # start calculating
         try:
-            self.ui.label.setText(self.ui.lineEdit.text()) # move text from lineEdit to label
+            self.ui.label.setText(self.ui.lineEdit.text())  # move text from lineEdit to label
             self.adjust_temp_font_size()
-            expression = (self.ui.lineEdit.text().replace('^', '**').replace("pi", "3.14159265358979323846"))
+            expression = self.ui.lineEdit.text().replace('^', '**').replace("pi", "3.14159265358979323846").replace(')(', ')*(').replace('///', '%')
             for i in range(10):
-                expression = expression.replace(f'{i}(', f'{i}*(').replace(')(', ')*(').replace('///', '%')
+                expression = expression.replace(f'{i}(', f'{i}*(')
             # if the equation
             if expression.find('x') > -1 and expression.find('Error') == -1:
                 transformations = (standard_transformations + (implicit_multiplication_application,))
