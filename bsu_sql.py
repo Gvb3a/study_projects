@@ -1,7 +1,4 @@
 import sqlite3
-from datetime import datetime
-from colorama import init, Fore, Style
-init()
 
 
 def sql_launch():
@@ -22,12 +19,11 @@ def sql_launch():
             time TEXT
             )
             ''')
-    print(f'{Fore.RED}Запуск бота{Style.RESET_ALL} в {datetime.now().strftime("%H:%M:%S %d.%m.%Y")}')
     connection.commit()
     connection.close()
 
 
-def sql_message(name, user_id, message):
+def sql_saved_message(name, user_id, message):
     connection = sqlite3.connect('bsu_database.db')
     cursor = connection.cursor()
 
