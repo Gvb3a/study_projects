@@ -15,7 +15,7 @@ init()
 
 # session = AiohttpSession(proxy="http://proxy.server:3128")
 bot = Bot('bot_token')
-# bot = Bot('bot_token' session=session)
+# bot = Bot('bot_token', session=session)
 dp = Dispatcher()
 
 inline_day = [InlineKeyboardButton(text='Расписание занятий студентов дневного отделения', callback_data='inline_day'),
@@ -178,8 +178,8 @@ def dist_keyboard(l):
 async def command_start(message: Message) -> None:
     l = sql_user(message.from_user.id, 1)
     await message.answer(
-        text=['Выберите тип расписания. После окончательного выбора бот запомнит ваше расписание и будет присылать его '
-              'при отправке любого сообщения.', 'Абярыце тып раскладу. Пасля канчатковага выбару бот запомніць ваш '
+        text=['Выберите тип расписания. После окончательного выбора бот запомнит Ваше расписание и будет присылать его '
+              'при отправке любого сообщения.', 'Абярыце тып раскладу. Пасля канчатковага выбару бот запомніць Ваш '
               'расклад і будзе дасылаць яго пры адпраўцы любога паведамлення'][l],
         reply_markup=start_keyboard(l))
     print(f'{Fore.RED}/start{Style.RESET_ALL} by {Fore.BLUE}{message.from_user.first_name}{Style.RESET_ALL} at {datetime.now().strftime("%H:%M:%S")}')
@@ -244,19 +244,8 @@ async def inline_back_fuc(callback: CallbackQuery):
 @dp.callback_query(F.data)
 async def process_callback_data(callback: types.CallbackQuery):
     link = callback.data
-    name = link[link.rfind('/'):]
-    user_id = callback.from_user.id
-    photos, error, count = main(link)
-    if error:
-        await bot.send_media_group(user_id, media=photos)
-        await bot.send_document(user_id, document=FSInputFile(f'{name}.pdf'))
-
-        for i in range(count):
-            remove(f'{name}_{i + 1}.png')
-        remove(f'{name}.pdf')
-    else:
-        await bot.send_message(user_id, 'Ошибка')
-    sql_saved_message(callback.from_user.username, user_id, link)
+    await bot.send_document(callback.from_user.id, f'https://philology.bsu.by/files/{link}.pdf')
+    sql_saved_message(callback.from_user.username, callback.from_user.id, link)
     await callback.answer()
     print(f'{Fore.GREEN}{link}{Style.RESET_ALL} by {Fore.BLUE}{callback.from_user.first_name}{Style.RESET_ALL} at {datetime.now().strftime("%H:%M:%S")}')
 
@@ -266,25 +255,10 @@ async def command_start(message: Message) -> None:
     await message.answer(['Язык был изменен', 'Мова была зменена'][sql_user(message.from_user.id, 0)])
     print(f'{Fore.RED}/language{Style.RESET_ALL} by {Fore.BLUE}{message.from_user.first_name}{Style.RESET_ALL} at {datetime.now().strftime("%H:%M:%S")}')
 
-
 @dp.message()
 async def main_handler(message: types.Message) -> None:
-    name = message.from_user.first_name
-    if message.from_user.username is not None:
-        name += f'({message.from_user.username})'
-    user_id = message.from_user.id
-    link = sql_saved_message(name, user_id, 0)
-    name = link[link.rfind('/'):]
-    photos, error, count = main(link)
-    if error and name != 0:
-        await bot.send_media_group(user_id, media=photos)
-        await bot.send_document(user_id, document=FSInputFile(f'{name}.pdf'))
-
-        for i in range(count):
-            remove(f'{name}_{i + 1}.png')
-        remove(f'{name}.pdf')
-    else:
-        await bot.send_message(user_id, 'Ошибка')
+    link = sql_saved_message(message.from_user.first_name, message.from_user.id, 0)
+    await message.answer_document(f'https://philology.bsu.by/files/{link}.pdf')
     print(f'{Fore.GREEN}{link}{Style.RESET_ALL} by {Fore.BLUE}{message.from_user.first_name}{Style.RESET_ALL} at {datetime.now().strftime("%H:%M:%S")}')
 
 
