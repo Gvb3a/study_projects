@@ -196,7 +196,7 @@ async def inline_day_handler(callback: CallbackQuery):
 
 
 @dp.callback_query(F.data == 'inline_dist')
-async def inline_day_handler(callback: CallbackQuery):
+async def inline_dist_handler(callback: CallbackQuery):
     l = sql_user(callback.from_user.id, 1)
     await callback.message.edit_text(
         text=['Расписание занятий (дистанционное обучение) студентов дневного отделения (ІІ семестр) 2023-2024. Выберете специальность',
@@ -205,28 +205,19 @@ async def inline_day_handler(callback: CallbackQuery):
     await callback.answer()
 
 
-@dp.callback_query(F.data == 'inline_dist')
-async def inline_2(callback: CallbackQuery):
-    l = sql_user(callback.from_user.id, 1)
-    await callback.message.edit_text(
-        text=['Расписание зачетов студентов дневного отделения (І семестр) 2023-2024. Выберете специальность',
-              'Расклад залікаў студэнтаў дзённага аддзялення (І семестр) 2023-2024. Абярыце спецыяльнасць'][l],
-        reply_markup=dist_keyboard(l))
-    await callback.answer()
-
 
 @dp.callback_query(F.data == 'inline_exam')
-async def inline_2(callback: CallbackQuery):
+async def inline_exam_handler(callback: CallbackQuery):
     await callback.answer(text='В разработке')
 
 
 @dp.callback_query(F.data == 'inline_session')
-async def inline_2(callback: CallbackQuery):
+async def inline_session_handler(callback: CallbackQuery):
     await callback.answer(text='В разработке')
 
 
 @dp.callback_query(F.data == 'text')
-async def text(callback: CallbackQuery):
+async def inline_text(callback: CallbackQuery):
     await callback.answer(text=['Это исключительно декоративная кнопка', 'Гэта выключна дэкаратыўная кнопка'][sql_user(callback.from_user.id, 1)])
 
 
@@ -234,8 +225,8 @@ async def text(callback: CallbackQuery):
 async def inline_back_fuc(callback: CallbackQuery):
     l = sql_user(callback.from_user.id, 1)
     await callback.message.edit_text(
-        text=['Выберите тип расписания. После окончательного выбора бот запомнит ваше расписание и будет присылать его '
-              'при отправке любого сообщения.', 'Абярыце тып раскладу. Пасля канчатковага выбару бот запомніць ваш '
+        text=['Выберите тип расписания. После окончательного выбора бот запомнит Ваше расписание и будет присылать его '
+              'при отправке любого сообщения.', 'Абярыце тып раскладу. Пасля канчатковага выбару бот запомніць Ваш '
               'расклад і будзе дасылаць яго пры адпраўцы любога паведамлення'][l],
         reply_markup=start_keyboard(l))
     await callback.answer()
@@ -244,21 +235,30 @@ async def inline_back_fuc(callback: CallbackQuery):
 @dp.callback_query(F.data)
 async def process_callback_data(callback: types.CallbackQuery):
     link = callback.data
-    await bot.send_document(callback.from_user.id, f'https://philology.bsu.by/files/{link}.pdf')
+    try:
+        await bot.send_document(callback.from_user.id, f'https://philology.bsu.by/files/{link}.pdf')
+    except:
+        await bot.send_message(callback.from_user.id, ['Ошибка: 404. Страница не найдена',
+                               'Памылка: 404. Старонка Не Найдена'][sql_user(callback.from_user.id, 1)])
     sql_saved_message(callback.from_user.username, callback.from_user.id, link)
     await callback.answer()
     print(f'{Fore.GREEN}{link}{Style.RESET_ALL} by {Fore.BLUE}{callback.from_user.first_name}{Style.RESET_ALL} at {datetime.now().strftime("%H:%M:%S")}')
 
 
 @dp.message(Command('language'))
-async def command_start(message: Message) -> None:
+async def command_language(message: Message) -> None:
     await message.answer(['Язык был изменен', 'Мова была зменена'][sql_user(message.from_user.id, 0)])
     print(f'{Fore.RED}/language{Style.RESET_ALL} by {Fore.BLUE}{message.from_user.first_name}{Style.RESET_ALL} at {datetime.now().strftime("%H:%M:%S")}')
+
 
 @dp.message()
 async def main_handler(message: types.Message) -> None:
     link = sql_saved_message(message.from_user.first_name, message.from_user.id, 0)
-    await message.answer_document(f'https://philology.bsu.by/files/{link}.pdf')
+    try:
+        await message.answer_document(f'https://philology.bsu.by/files/{link}.pdf')
+    except:
+        await message.answer(['Ошибка 404. Страница не найдена',
+                              'Памылка 404.  Старонка Не Найдена'][sql_user(message.from_user.id, 1)])
     print(f'{Fore.GREEN}{link}{Style.RESET_ALL} by {Fore.BLUE}{message.from_user.first_name}{Style.RESET_ALL} at {datetime.now().strftime("%H:%M:%S")}')
 
 
