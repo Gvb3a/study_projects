@@ -11,94 +11,74 @@ from aiogram.types import InputMediaPhoto, Message, CallbackQuery, FSInputFile, 
 from aiogram.client.session.aiohttp import AiohttpSession
 
 from bsu_sql import sql_launch, sql_user, sql_saved_message
-init()
+
+init()  # to colour text in cmd
 
 # session = AiohttpSession(proxy="http://proxy.server:3128")
 bot = Bot('bot_token')
 # bot = Bot('bot_token', session=session)
 dp = Dispatcher()
 
-inline_day = [InlineKeyboardButton(text='Расписание занятий студентов дневного отделения', callback_data='inline_day'),
-              InlineKeyboardButton(text='Расклад заняткаў студэнтаў дзённага аддзялення', callback_data='inline_day')]
-inline_dist = [InlineKeyboardButton(text='Расписание занятий ДО студентов дневного отделения', callback_data='inline_dist'),
-                   InlineKeyboardButton(text='Расклад заняткаў ДН студэнтаў дзённага аддзялення', callback_data='inline_dist')]
-inline_exam = [InlineKeyboardButton(text='Расписание зачетов студентов дневного отделения', callback_data='inline_exam'),
-               InlineKeyboardButton(text='Расклад залікаў студэнтаў дзённага аддзялення', callback_data='inline_exam')]
-inline_session = [InlineKeyboardButton(text='Расписание консультаций и экзаменов студентов дневного отделения', callback_data='inline_session'),
-                  InlineKeyboardButton(text='Расклад кансультацый і экзаменаў студэнтаў дзённага аддзялення', callback_data='inline_session')]
-
 
 def start_keyboard(l):
     inline_start_keyboard = InlineKeyboardMarkup(
     inline_keyboard=[
-        [inline_day[l]],
-        [inline_dist[l]],
-        [inline_exam[l]],
-        [inline_session[l]]
+        [InlineKeyboardButton(text=['Расписание занятий студентов дневного отделения',
+                                    'Расклад заняткаў студэнтаў дзённага аддзялення'][l], callback_data='inline_day')],
+        [InlineKeyboardButton(text=['Расписание занятий ДО студентов дневного отделения',
+                                    'Расклад заняткаў ДН студэнтаў дзённага аддзялення'][l], callback_data='inline_dist')],
+        [InlineKeyboardButton(text=['Расписание зачетов студентов дневного отделения',
+                                    'Расклад залікаў студэнтаў дзённага аддзялення'][l], callback_data='inline_exam')],
+        [InlineKeyboardButton(text=['Расписание консультаций и экзаменов студентов дневного отделения',
+                                    'Расклад кансультацый і экзаменаў студэнтаў дзённага аддзялення'][l], callback_data='inline_session')]
     ])
     return inline_start_keyboard
 
 
+def inline_button(path, speciality):
+    inline_list = []
+    for i in range(4):
+        inline_list.append(InlineKeyboardButton(text=f'{i+1} курс', callback_data=f'{path}{i+1}_{speciality}'))
+    return inline_list
+
 def create_inline_keyboard(l, path):
 
-    inline_back = InlineKeyboardButton(text='Назад', callback_data='back')
+    inline_belarusian_philology = [InlineKeyboardButton(text=['Белорусская филология', 'Беларуская філалогія'][l],
+                                                        callback_data='text')]
 
-    inline_belarusian_philology = [InlineKeyboardButton(text='Белорусская филология', callback_data='text'),
-                                   InlineKeyboardButton(text='Беларуская філалогія', callback_data='text')]
-    inline_belarusian_philology_1 = InlineKeyboardButton(text='1 курс', callback_data=f'{path}1_bel')
-    inline_belarusian_philology_2 = InlineKeyboardButton(text='2 курс', callback_data=f'{path}2_bel')
-    inline_belarusian_philology_3 = InlineKeyboardButton(text='3 курс', callback_data=f'{path}3_bel')
-    inline_belarusian_philology_4 = InlineKeyboardButton(text='4 курс', callback_data=f'{path}4_bel')
+    inline_russian_philology = [InlineKeyboardButton(text=['Русская филология', 'Руская філалогія'][l],
+                                                     callback_data='text')]
 
-    inline_russian_philology = [InlineKeyboardButton(text='Русская филология', callback_data='text'),
-                                InlineKeyboardButton(text='Руская філалогія', callback_data='text')]
-    inline_russian_philology_1 = InlineKeyboardButton(text='1 курс', callback_data=f'{path}1_rus')
-    inline_russian_philology_2 = InlineKeyboardButton(text='2 курс', callback_data=f'{path}2_rus')
-    inline_russian_philology_3 = InlineKeyboardButton(text='3 курс', callback_data=f'{path}3_rus')
-    inline_russian_philology_4 = InlineKeyboardButton(text='4 курс', callback_data=f'{path}4_rus')
+    inline_slavic_philology = [InlineKeyboardButton(text=['Славянская филология', 'Славянская філалогія'][l],
+                                                    callback_data='text')]
 
-    inline_slavic_philology = [InlineKeyboardButton(text='Славянская филология', callback_data='text'),
-                               InlineKeyboardButton(text='Славянская філалогія', callback_data='text')]
-    inline_slavic_philology_1 = InlineKeyboardButton(text='1 курс', callback_data=f'{path}1_slav')
-    inline_slavic_philology_2 = InlineKeyboardButton(text='2 курс', callback_data=f'{path}2_slav')
-    inline_slavic_philology_3 = InlineKeyboardButton(text='3 курс', callback_data=f'{path}3_slav')
-    inline_slavic_philology_4 = InlineKeyboardButton(text='4 курс', callback_data=f'{path}4_slav')
+    inline_classical_philology = [InlineKeyboardButton(text=['Классическая  филология', 'Класічная  філалогія'][l],
+                                                       callback_data='text')]
+    inline_classical_philology_3 = [InlineKeyboardButton(text='3 курс', callback_data=f'{path}3_klassiki')]
 
-    inline_classical_philology = [InlineKeyboardButton(text='Классическая  филология', callback_data='text'),
-                                  InlineKeyboardButton(text='Класічная  філалогія', callback_data='text')]
-    inline_classical_philology_3 = InlineKeyboardButton(text='3 курс', callback_data=f'{path}3_klassiki')
+    inline_romano_germanic_philology = [InlineKeyboardButton(text=['Романо-германская филология', 'Рамана-германская філалогія'][l],
+                                                             callback_data='text')]
 
-    inline_romano_germanic_philology = [
-        InlineKeyboardButton(text='Романо-германская филология', callback_data='text'),
-        InlineKeyboardButton(text='Рамана-германская філалогія', callback_data='text')]
-    inline_romano_germanic_philology_1 = InlineKeyboardButton(text='1 курс', callback_data=f'{path}1_rom-germ')
-    inline_romano_germanic_philology_2 = InlineKeyboardButton(text='2 курс', callback_data=f'{path}2_rom-germ')
-    inline_romano_germanic_philology_3 = InlineKeyboardButton(text='3 курс', callback_data=f'{path}3_rom-germ')
-    inline_romano_germanic_philology_4 = InlineKeyboardButton(text='4 курс', callback_data=f'{path}4_rom-germ')
+    inline_oriental_philology = [InlineKeyboardButton(text=['Восточная филология', 'Усходняя філалогія'][l],
+                                                      callback_data='text')]
 
-    inline_oriental_philology = [InlineKeyboardButton(text='Восточная филология', callback_data='text'),
-                                 InlineKeyboardButton(text='Усходняя філалогія', callback_data='text')]
-    inline_oriental_philology_1 = InlineKeyboardButton(text='1 курс', callback_data=f'{path}1_vost')
-    inline_oriental_philology_2 = InlineKeyboardButton(text='2 курс', callback_data=f'{path}2_vost')
-    inline_oriental_philology_3 = InlineKeyboardButton(text='3 курс', callback_data=f'{path}3_vost')
-    inline_oriental_philology_4 = InlineKeyboardButton(text='4 курс', callback_data=f'{path}4_vost')
-
+    inline_back = [InlineKeyboardButton(text='Назад', callback_data='back')]
 
     inline_keyboard = InlineKeyboardMarkup(
     inline_keyboard=[
-    [inline_belarusian_philology[l]],
-    [inline_belarusian_philology_1, inline_belarusian_philology_2, inline_belarusian_philology_3, inline_belarusian_philology_4],
-    [inline_russian_philology[l]],
-    [inline_russian_philology_1, inline_russian_philology_2, inline_russian_philology_3, inline_russian_philology_4],
-    [inline_slavic_philology[l]],
-    [inline_slavic_philology_1, inline_slavic_philology_2, inline_slavic_philology_3, inline_slavic_philology_4],
-    [inline_classical_philology[l]],
-    [inline_classical_philology_3],
-    [inline_romano_germanic_philology[l]],
-    [inline_romano_germanic_philology_1, inline_romano_germanic_philology_2, inline_romano_germanic_philology_3, inline_romano_germanic_philology_4],
-    [inline_oriental_philology[l]],
-    [inline_oriental_philology_1, inline_oriental_philology_2, inline_oriental_philology_3, inline_oriental_philology_4],
-    [inline_back]
+    inline_belarusian_philology,
+    inline_button(path, 'bel'),
+    inline_russian_philology,
+    inline_button(path, 'rus'),
+    inline_slavic_philology,
+    inline_button(path, 'slav'),
+    inline_classical_philology,
+    inline_classical_philology_3,
+    inline_romano_germanic_philology,
+    inline_button(path, 'rom-germ'),
+    inline_oriental_philology,
+    inline_button(path, 'vost'),
+    inline_back
     ])
     return inline_keyboard
 
