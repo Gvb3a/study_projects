@@ -10,17 +10,18 @@ from aiogram.filters import CommandStart, Command
 from aiogram.types import InputMediaPhoto, Message, CallbackQuery, FSInputFile, InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.client.session.aiohttp import AiohttpSession
 
-from bsu_sql import sql_launch, sql_user, sql_saved_message
+from bsu_sql import sql_launch, sql_language, sql_saved_message, sql_change_language
 
-init()  # to colour text in cmd
-
+init()
+# код в комментариях предназначен для pythonanywhere(онлайн-хостинг)
 # session = AiohttpSession(proxy="http://proxy.server:3128")
 bot = Bot('bot_token')
 # bot = Bot('bot_token', session=session)
 dp = Dispatcher()
 
 
-def start_keyboard(l):
+def start_keyboard(l):  # функция для start inline-keyboard (в зависимости от языка)
+    # l - язык пользователя. 0 - русский, 1 - белорусский
     inline_start_keyboard = InlineKeyboardMarkup(
     inline_keyboard=[
         [InlineKeyboardButton(text=['Расписание занятий студентов дневного отделения',
@@ -35,33 +36,30 @@ def start_keyboard(l):
     return inline_start_keyboard
 
 
-def inline_button(path, speciality):
+def inline_button(path, speciality):  # генерация однотипных inline кнопок
     inline_list = []
     for i in range(4):
         inline_list.append(InlineKeyboardButton(text=f'{i+1} курс', callback_data=f'{path}{i+1}_{speciality}'))
     return inline_list
 
-def create_inline_keyboard(l, path):
 
+def create_inline_keyboard(l, path):
+    # расписания хранятся по следующему пути:
+    # https://philology.bsu.by/files/dnevnoe/{тип расписания}/{курс}_{специальность}.pdf
     inline_belarusian_philology = [InlineKeyboardButton(text=['Белорусская филология', 'Беларуская філалогія'][l],
                                                         callback_data='text')]
-
     inline_russian_philology = [InlineKeyboardButton(text=['Русская филология', 'Руская філалогія'][l],
                                                      callback_data='text')]
-
     inline_slavic_philology = [InlineKeyboardButton(text=['Славянская филология', 'Славянская філалогія'][l],
                                                     callback_data='text')]
-
     inline_classical_philology = [InlineKeyboardButton(text=['Классическая  филология', 'Класічная  філалогія'][l],
                                                        callback_data='text')]
+    # на классической филологии только один набор
     inline_classical_philology_3 = [InlineKeyboardButton(text='3 курс', callback_data=f'{path}3_klassiki')]
-
     inline_romano_germanic_philology = [InlineKeyboardButton(text=['Романо-германская филология', 'Рамана-германская філалогія'][l],
                                                              callback_data='text')]
-
     inline_oriental_philology = [InlineKeyboardButton(text=['Восточная филология', 'Усходняя філалогія'][l],
                                                       callback_data='text')]
-
     inline_back = [InlineKeyboardButton(text='Назад', callback_data='back')]
 
     inline_keyboard = InlineKeyboardMarkup(
@@ -83,10 +81,9 @@ def create_inline_keyboard(l, path):
     return inline_keyboard
 
 
-
-@dp.message(CommandStart())
-async def command_start(message: Message) -> None:
-    l = sql_user(message.from_user.id, 1)
+@dp.message(CommandStart())  # Обработчик команды /start. Вызывает меню выбора типа расписания
+async def command_start_handler(message: Message) -> None:
+    l = sql_language(message.from_user.id)  # из базы данных узнаем язык пользователя
     await message.answer(
         text=['Выберите тип расписания. После окончательного выбора бот запомнит Ваше расписание и будет присылать его '
               'при отправке любого сообщения.', 'Абярыце тып раскладу. Пасля канчатковага выбару бот запомніць Ваш '
@@ -97,7 +94,7 @@ async def command_start(message: Message) -> None:
 
 @dp.callback_query(F.data == 'inline_day')
 async def inline_day_handler(callback: CallbackQuery):
-    l = sql_user(callback.from_user.id, 1)
+    l = sql_language(callback.from_user.id)
     await callback.message.edit_text(
         text=['Расписание занятий студентов дневного отделения (ІІ семестр) 2023-2024. Выберете специальность',
               'Расклад заняткаў студэнтаў дзённага аддзялення (ІІ семестр) 2023-2024. Абярыце спецыяльнасць'][l],
@@ -107,7 +104,7 @@ async def inline_day_handler(callback: CallbackQuery):
 
 @dp.callback_query(F.data == 'inline_dist')
 async def inline_dist_handler(callback: CallbackQuery):
-    l = sql_user(callback.from_user.id, 1)
+    l = sql_language(callback.from_user.id)
     await callback.message.edit_text(
         text=['Расписание занятий (дистанционное обучение) студентов дневного отделения (ІІ семестр) 2023-2024. Выберете специальность',
               'Расклад заняткаў (дыстанцыйнае навучанне) студэнтаў дзённага аддзялення (ІІ семестр) 2023-2024. Абярыце спецыяльнасць'][l],
@@ -115,10 +112,9 @@ async def inline_dist_handler(callback: CallbackQuery):
     await callback.answer()
 
 
-
 @dp.callback_query(F.data == 'inline_exam')
 async def inline_exam_handler(callback: CallbackQuery):
-    l = sql_user(callback.from_user.id, 1)
+    l = sql_language(callback.from_user.id)
     await callback.message.edit_text(
         text=['Расписание зачетов студентов дневного отделения (І семестр) 2023-2024. Выберете специальность',
               'Расклад залікаў студэнтаў дзённага аддзялення (І семестр) 2023-2024. Абярыце спецыяльнасць'][l],
@@ -128,7 +124,7 @@ async def inline_exam_handler(callback: CallbackQuery):
 
 @dp.callback_query(F.data == 'inline_session')
 async def inline_session_handler(callback: CallbackQuery):
-    l = sql_user(callback.from_user.id, 1)
+    l = sql_language(callback.from_user.id)
     await callback.message.edit_text(
         text=['Расписание консультаций и экзаменов студентов дневного отделения (І семестр 2023-2024). Выберете специальность',
               'Расклад кансультацый і экзаменаў студэнтаў дзённага аддзялення (І семестр 2023-2024). Абярыце спецыяльнасць'][l],
@@ -138,12 +134,12 @@ async def inline_session_handler(callback: CallbackQuery):
 
 @dp.callback_query(F.data == 'text')
 async def inline_text(callback: CallbackQuery):
-    await callback.answer(text=['Это исключительно декоративная кнопка', 'Гэта выключна дэкаратыўная кнопка'][sql_user(callback.from_user.id, 1)])
+    await callback.answer(text=['Это исключительно декоративная кнопка', 'Гэта выключна дэкаратыўная кнопка'][sql_language(callback.from_user.id)])
 
 
 @dp.callback_query(F.data == 'back')
 async def inline_back_fuc(callback: CallbackQuery):
-    l = sql_user(callback.from_user.id, 1)
+    l = sql_language(callback.from_user.id)
     await callback.message.edit_text(
         text=['Выберите тип расписания. После окончательного выбора бот запомнит Ваше расписание и будет присылать его '
               'при отправке любого сообщения.', 'Абярыце тып раскладу. Пасля канчатковага выбару бот запомніць Ваш '
@@ -155,12 +151,8 @@ async def inline_back_fuc(callback: CallbackQuery):
 @dp.callback_query(F.data)
 async def process_callback_data(callback: types.CallbackQuery):
     name = callback.from_user.first_name
-    user_id = callback.from_user.id
     link = callback.data
-    callback_id = callback.id
-    await main(link, user_id, callback_id)
-    name_file = link[link.rfind('/') + 1:]
-    remove(f'{name_file}_{callback_id}.pdf')
+    await main(link, callback.from_user.id, callback.id)
     await callback.answer()
     sql_saved_message(callback.from_user.username, callback.from_user.id, link)
     print(f'{Fore.GREEN}{link}{Style.RESET_ALL} by {Fore.BLUE}{name}{Style.RESET_ALL} at {datetime.now().strftime("%H:%M:%S")}')
@@ -168,7 +160,7 @@ async def process_callback_data(callback: types.CallbackQuery):
 
 @dp.message(Command('language'))
 async def command_language(message: Message) -> None:
-    await message.answer(['Язык был изменен', 'Мова была зменена'][sql_user(message.from_user.id, 0)])
+    await message.answer(['Язык был изменен', 'Мова была зменена'][sql_change_language(message.from_user.id)])
     print(f'{Fore.RED}/language{Style.RESET_ALL} by {Fore.BLUE}{message.from_user.first_name}{Style.RESET_ALL} at {datetime.now().strftime("%H:%M:%S")}')
 
 
@@ -176,15 +168,13 @@ async def command_language(message: Message) -> None:
 async def main_handler(message: types.Message) -> None:
     name = message.from_user.first_name
     user_id = message.from_user.id
-    message_id = message.message_id
     link = sql_saved_message(name, user_id, 0)
-    await main(link, user_id, message_id)
-    name_file = link[link.rfind('/')+1:]
-    remove(f'{name_file}_{message_id}.pdf')
+    await main(link, user_id, message.message_id)
     print(f'{Fore.GREEN}{link}{Style.RESET_ALL} by {Fore.BLUE}{name}{Style.RESET_ALL} at {datetime.now().strftime("%H:%M:%S")}')
 
 
 async def main(data, user_id, message_id):
+    l = sql_language(user_id)
     try:
         disable_warnings()
         response = requests.get(f'https://philology.bsu.by/files/dnevnoe/{data}.pdf', verify=False)
@@ -200,16 +190,17 @@ async def main(data, user_id, message_id):
             page = doc.load_page(i)
             pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
             pix.save(f"{name}_{message_id}_{i + 1}.png")
-            media = InputMediaPhoto(media=FSInputFile(f"{name}_{message_id}_{i + 1}.png"))
-            photos.append(media)
+            photos.append(InputMediaPhoto(media=FSInputFile(f"{name}_{message_id}_{i + 1}.png")))
+        doc.close()
 
         await bot.send_media_group(user_id, media=photos)
-        await bot.send_document(user_id, document=FSInputFile(f'{name}_{message_id}.pdf'))
 
         for i in range(count):
             remove(f'{name}_{message_id}_{i + 1}.png')
+        remove(f'{name}_{message_id}.pdf')
+
     except:
-        await bot.send_message(user_id, ['Ошибка 404. Страница не найдена', 'Памылка 404. Старонка не знойдзена'][sql_user(user_id, 1)])
+        await bot.send_message(user_id, ['Ошибка 404. Страница не найдена', 'Памылка 404. Старонка не знойдзена'][l])
 
 
 if __name__ == '__main__':
