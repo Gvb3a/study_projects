@@ -48,23 +48,31 @@ def sql_saved_message(name, user_id, message):
         return message
 
 
-def sql_user(user_id, mode):
+def sql_language(user_id):
     connection = sqlite3.connect('bsu_database.db')
     cursor = connection.cursor()
 
     cursor.execute(f"SELECT * FROM user WHERE id = {user_id}")
     row = cursor.fetchone()
+
     if row is None:
         cursor.execute(f"INSERT INTO user(id, language) VALUES ({user_id}, 0)")
         connection.commit()
         connection.close()
         return 0
-    elif mode:
+    else:
         connection.close()
         return row[3]
-    else:
-        new_mode = 0 if row[3] else 1
-        cursor.execute(f"UPDATE user SET language = {new_mode} WHERE id = {user_id}")
-        connection.commit()
-        connection.close()
-        return new_mode
+
+
+def sql_change_language(user_id):
+    connection = sqlite3.connect('bsu_database.db')
+    cursor = connection.cursor()
+
+    language = sql_language(user_id)
+    new_mode = 0 if language else 1
+    cursor.execute(f"UPDATE user SET language = {new_mode} WHERE id = {user_id}")
+
+    connection.commit()
+    connection.close()
+    return new_mode
