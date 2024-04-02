@@ -1,7 +1,13 @@
 import sqlite3
-from datetime import datetime
+import datetime
 import matplotlib.pyplot as plt
 import numpy as np
+
+
+def current_time():
+    delta = datetime.timedelta(hours=3, minutes=0)
+    current_time = datetime.datetime.now(datetime.timezone.utc) + delta
+    return current_time.strftime("%H:%M:%S %d.%m.%Y")
 
 
 def sql_launch():
@@ -12,7 +18,8 @@ def sql_launch():
         name TEXT,
         id INTEGER PRIMARY KEY,
         message TEXT,
-        language INT
+        language INT,
+        mode INT
         )
         ''')
     cursor.execute('''
@@ -37,7 +44,7 @@ def sql_stat(name, data):
     course, speciality = data[1].split('_')
 
     cursor.execute(f"INSERT INTO stat(name, type, speciality, course, time) VALUES ('{name}', '{type_data}', "
-                   f"'{speciality}', '{course}', '{datetime.now().strftime('%H:%M:%S %d.%m.%Y')}')")
+                   f"'{speciality}', '{course}', '{current_time()}')")
 
     connection.commit()
     connection.close()
@@ -50,8 +57,8 @@ def plot():
     cursor.execute('SELECT * FROM stat')  # получаем информацию из таблицы
     rows = cursor.fetchall()  # заносим ее в список
 
-    day = int(datetime.now().strftime("%d"))  # узнаем сегодняшний день
-    mounth = datetime.now().strftime("%m")
+    day = int(datetime.datetime.now().strftime("%d"))  # узнаем сегодняшний день
+    mounth = datetime.datetime.now().strftime("%m")
     i = -1
     # создаем списки, в которых находятся 24 списка
     day_data: list[list[int]] = [0 for _ in range(24)]
@@ -76,10 +83,10 @@ def plot():
 
     plt.xticks(np.arange(0, 24, step=2), np.arange(0, 24, step=2))  # пронумеровать каждые 2 столбца
 
-    name = datetime.now().strftime("%H%M%S")
+    name = datetime.datetime.now().strftime("%H:%M:%S")
 
     plt.savefig(f'{name}.png')
-
+    plt.clf()
     connection.close()
     return name
 
@@ -109,7 +116,7 @@ def sql_saved_message(name, user_id, message):
         return message
 
 
-def sql_language(user_id):
+def sql_mode_or_language(user_id, what):
     connection = sqlite3.connect('bsu_database.db')
     cursor = connection.cursor()
 
@@ -117,22 +124,22 @@ def sql_language(user_id):
     row = cursor.fetchone()
 
     if row is None:
-        cursor.execute(f"INSERT INTO user(id, language) VALUES ({user_id}, 0)")
+        cursor.execute(f"INSERT INTO user(id, language, mode) VALUES ({user_id}, 0, 1)")
         connection.commit()
         connection.close()
         return 0
     else:
         connection.close()
-        return row[3]
+        return row[3 if what == 'language' else 4]
 
 
-def sql_change_language(user_id):
+def sql_change_mode_or_language(user_id, changeable):
     connection = sqlite3.connect('bsu_database.db')
     cursor = connection.cursor()
 
-    language = sql_language(user_id)
-    new_mode = 0 if language else 1
-    cursor.execute(f"UPDATE user SET language = {new_mode} WHERE id = {user_id}")
+    mode_or_language = sql_mode_or_language(user_id, changeable)
+    new_mode = 0 if mode_or_language else 1
+    cursor.execute(f"UPDATE user SET {changeable} = {new_mode} WHERE id = {user_id}")
 
     connection.commit()
     connection.close()
