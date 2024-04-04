@@ -44,7 +44,7 @@ def inline_button(path, speciality):  # генерация однотипных 
     return inline_list
 
 
-def create_inline_keyboard(l, path):
+def create_main_inline_keyboard(l, path):
     # расписания хранятся по следующему пути:
     # https://philology.bsu.by/files/dnevnoe/{тип расписания}/{курс}_{специальность}.pdf
     inline_belarusian_philology = [InlineKeyboardButton(text=['Белорусская филология', 'Беларуская філалогія'][l],
@@ -63,7 +63,6 @@ def create_inline_keyboard(l, path):
     inline_oriental_philology = [InlineKeyboardButton(text=['Восточная филология', 'Усходняя філалогія'][l],
                                                       callback_data='text')]
     inline_back = [InlineKeyboardButton(text='Назад', callback_data='back')]
-
     inline_keyboard = InlineKeyboardMarkup(
     inline_keyboard=[
     inline_belarusian_philology,
@@ -113,11 +112,11 @@ def now():  # узнаем время, учитывая временной по�
     return current_time.strftime("%H:%M:%S %d.%m.%Y")
 
 
-def name_fuc(username, name):
+def name_fuc(username, name):  # функция для username. Просто когда username будет недоступен, возвращаем name
     return username if username is not None else name
 
 
-@dp.message(CommandStart())  # Обработчик команды /start. Вызывает меню выбора типа расписания
+@dp.message(CommandStart())  # Обработчик команды /start. Вызывает меню выбора
 async def command_start_handler(message: Message) -> None:
     l = sql_mode_or_language(message.from_user.id, 'language')  # из базы данных узнаем язык пользователя
     await message.answer(text=start_list[l], reply_markup=start_keyboard(l))
@@ -137,32 +136,29 @@ async def inline_back_handler(callback: CallbackQuery):
     await callback.answer()
 
 
-def inline_language(l):  # что бы два раза не писать, сделал функцию
+def inline_mode_language(l, mode):
     return InlineKeyboardMarkup(inline_keyboard=
-    [[InlineKeyboardButton(text=['Изменить обратно', 'Змяніць назад'][l], callback_data='language')]])
+    [[InlineKeyboardButton(text=['Изменить обратно', 'Змяніць назад'][l], callback_data=mode)]])
 
 
-@dp.message(Command('language'))
+@dp.message(Command('language'))  # Обработчик команды /language
 async def command_language(message: Message) -> None:
     user_id = message.from_user.id
-    text = ['Язык был изменен', 'Мова была зменена'][sql_change_mode_or_language(user_id, 'language')]
-    await message.answer(text=text, reply_markup=inline_language(sql_mode_or_language(user_id, 'language')))
+    l = sql_change_mode_or_language(user_id, 'language')  # меняем язык и узнаем его
+    text = ['Язык был изменен', 'Мова была зменена'][l]
+    await message.answer(text=text, reply_markup=inline_mode_language(l, 'language'))
     name = name_fuc(message.from_user.username, message.from_user.first_name)
     print(f'{Fore.RED}language{Style.RESET_ALL} by {Fore.BLUE}{name}{Style.RESET_ALL} at {now()}')
 
 
-@dp.callback_query(F.data == 'language')
+@dp.callback_query(F.data == 'language')  # при нажатии на кнопку смены языка
 async def callback_language(callback: types.CallbackQuery):
     user_id = callback.from_user.id
-    text = ['Язык был изменен', 'Мова была зменена'][sql_change_mode_or_language(user_id, 'language')]
-    await callback.message.edit_text(text=text, reply_markup=inline_language(sql_mode_or_language(user_id, 'language')))
+    l = sql_change_mode_or_language(user_id, 'language')
+    text = ['Язык был изменен', 'Мова была зменена'][l]
+    await callback.message.edit_text(text=text, reply_markup=inline_mode_language(l, 'language'))
     name = name_fuc(callback.from_user.username, callback.from_user.first_name)
     print(f'{Fore.YELLOW}language{Style.RESET_ALL} by {Fore.BLUE}{name}{Style.RESET_ALL} at {now()}')
-
-
-def inline_mode(l):
-    return InlineKeyboardMarkup(inline_keyboard=
-    [[InlineKeyboardButton(text=['Изменить обратно', 'Змяніць назад'][l], callback_data='mode')]])
 
 
 @dp.message(Command('mode'))
@@ -171,7 +167,7 @@ async def command_mode(message: Message) -> None:
     l = sql_mode_or_language(user_id, 'language')
     text = (f"{['режим изменен на', 'Рэжым зменены на'][l]} "
             f"{['pdf', 'png'][sql_change_mode_or_language(user_id, 'mode')]}")
-    await message.answer(text=text, reply_markup=inline_mode(l))
+    await message.answer(text=text, reply_markup=inline_mode_language(l, 'mode'))
     name = name_fuc(message.from_user.username, message.from_user.first_name)
     print(f'{Fore.RED}mode{Style.RESET_ALL} by {Fore.BLUE}{name}{Style.RESET_ALL} at {now()}')
 
@@ -182,26 +178,9 @@ async def callback_mode(callback: types.CallbackQuery):
     l = sql_mode_or_language(user_id, 'language')
     text = (f"{['Режим изменен на', 'Рэжым зменены на'][l]} "
             f"{['pdf', 'png'][sql_change_mode_or_language(user_id, 'mode')]}")
-    await callback.message.edit_text(text=text, reply_markup=inline_mode(l))
+    await callback.message.edit_text(text=text, reply_markup=inline_mode_language(l, 'mode'))
     name = name_fuc(callback.from_user.username, callback.from_user.first_name)
     print(f'{Fore.YELLOW}mode{Style.RESET_ALL} by {Fore.BLUE}{name}{Style.RESET_ALL} at {now()}')
-
-
-@dp.callback_query(F.data)
-async def callback_data(callback: types.CallbackQuery):
-    data = callback.data
-    l = sql_mode_or_language(callback.from_user.id, 'language')
-    name = name_fuc(callback.from_user.username, callback.from_user.first_name)
-    if data[:6] == 'inline':
-        data = data[7:]
-        await callback.message.edit_text(text=main_dict[data][l]+['Выберете специальность', 'Абярыце спецыяльнасць'][l],
-                                         reply_markup=create_inline_keyboard(l, data))
-        await callback.answer()
-    else:
-        await main(data, callback.from_user.id, callback.id, l, name)
-        await callback.answer()
-        sql_saved_message(callback.from_user.username, callback.from_user.id, data)
-        print(f'{Fore.GREEN}{data}{Style.RESET_ALL} by {Fore.BLUE}{name}{Style.RESET_ALL} at {now()}')
 
 
 @dp.message(Command('setting'))
@@ -249,6 +228,22 @@ async def command_stat(message: Message) -> None:
     print(f'{Fore.RED}stat{Style.RESET_ALL} by {Fore.BLUE}{name}{Style.RESET_ALL} at {now()}')
 
 
+@dp.callback_query(F.data)
+async def callback_data(callback: types.CallbackQuery):
+    data = callback.data
+    l = sql_mode_or_language(callback.from_user.id, 'language')
+    name = name_fuc(callback.from_user.username, callback.from_user.first_name)
+    if data[:6] == 'inline':
+        data = data[7:]
+        await callback.message.edit_text(text=main_dict[data][l]+['Выберете специальность', 'Абярыце спецыяльнасць'][l],
+                                         reply_markup=create_main_inline_keyboard(l, data))
+        await callback.answer()
+    else:
+        await main(data, callback.from_user.id, callback.id, l, name)
+        await callback.answer()
+        sql_saved_message(callback.from_user.username, callback.from_user.id, data)
+        print(f'{Fore.GREEN}{data}{Style.RESET_ALL} by {Fore.BLUE}{name}{Style.RESET_ALL} at {now()}')
+
 
 @dp.message()
 async def main_handler(message: types.Message) -> None:
@@ -271,40 +266,51 @@ async def main(data, user_id, message_id, l, name):
         # скачиваем pdf файл
         name_file = data.split('/')[1]  # raspisanie/3_rom-germ >>> 3_rom-germ
 
-        with open(f'{name_file}.pdf', 'wb') as file:
+        with open(f'{name_file}_{message_id}.pdf', 'wb') as file:
             file.write(response.content)  # сохраняем файл
 
-        doc = fitz.open(f'{name_file}.pdf')  # начинается магия
-        photos = []  # Тут будут храниться фотки. Нужно их занести в список
-        count = len(doc)  # количество страниц
-        n = 2  # качество страниц
         cap = name_file.split('_')  # 3_rom-germ >>> [3, rom-germ]
         # Тут я расшифровываю путь. В словаре main_dict находятся значения raspisanie, USRDO, zachet и sesia
         # В sup_dict - bel, rus, slav, klassiki, rom-germ, vost. В cap[0] - курс
         caption = main_dict[data.split('/')[0]][l] + sup_dict[cap[1]][l] + ' ' + cap[0] + ' курс'
-        # Дальше идёт код, которые преобразует страница pdf файла в png. Если честно, то я без понятия, как он работает
-        for i in range(count):
-            page = doc.load_page(i)
-            pix = page.get_pixmap(matrix=fitz.Matrix(n, n))
-            pix.save(f"{name_file}_{message_id}_{i + 1}.png")  # сохраняем файл
-            photos.append(InputMediaPhoto(media=FSInputFile(f"{name_file}_{message_id}_{i + 1}.png"),
-                                          caption=caption if i == 0 else None))  # добавляем в список
-        doc.close()  # Закрываем документ. Иначе мы не сможем с ним взаимодействовать
 
-        await bot.send_media_group(user_id, media=photos)  # отправляем фотки
+        inline_update = [InlineKeyboardButton(text=['Обновить', 'Аднавіць'][l], callback_data=data)]
+        inline_update_keyboard = InlineKeyboardMarkup(inline_keyboard=[inline_update])
 
-        for i in range(count):  # удаляем фотки
-            remove(f'{name_file}_{message_id}_{i + 1}.png')
+        if sql_mode_or_language(user_id, 'mode') == 1:
+            doc = fitz.open(f'{name_file}_{message_id}.pdf')  # начинается магия по преобразованию pdf в png
+            photos = []  # Тут будут храниться фотки. Нужно их занести в список
+            count = len(doc)  # количество страниц
+            n = 2  # качество страниц
+            #  Дальше идёт код, которые преобразует страницы pdf файла в png. Если честно, то я без понятия, как он работает
+            for i in range(count):
+                page = doc.load_page(i)
+                pix = page.get_pixmap(matrix=fitz.Matrix(n, n))
+                pix.save(f"{name_file}_{message_id}_{i + 1}.png")  # сохраняем файл
+                photos.append(InputMediaPhoto(media=FSInputFile(f"{name_file}_{message_id}_{i + 1}.png"),
+                                              caption=caption if i == 0 else None))  # добавляем в список
+            doc.close()  # Закрываем документ. Иначе мы не сможем с ним взаимодействовать
+
+            if count == 1:
+                await bot.send_photo(user_id, photo=FSInputFile(f"{name_file}_{message_id}_{1}.png"), caption=caption,
+                                     reply_markup=InlineKeyboardMarkup(inline_keyboard=[inline_update]))
+            else:
+                inline_back = [InlineKeyboardButton(text='Меню', callback_data='back')]
+                await bot.send_media_group(user_id, media=photos)  # отправляем фотки
+                await bot.send_message(user_id, text=
+                                       ['Нажмите на кнопку или отправьте любое сообщение, что бы обновить расписание',
+                                        'Націсніце на кнопку або адпраўце любое паведамленне, каб абнавіць расклад'][l],
+                                       reply_markup=InlineKeyboardMarkup(inline_keyboard=[inline_update, inline_back]))
+
+            for i in range(count):  # удаляем фотки
+                remove(f'{name_file}_{message_id}_{i + 1}.png')
+        else:
+            doc = FSInputFile(f'{name_file}_{message_id}.pdf')
+            await bot.send_document(user_id, document=doc, reply_markup=inline_update_keyboard, caption=caption)
         remove(f'{name_file}_{message_id}.pdf')  # удаляем pdf
 
-        # в телеграмме нельзя к группе медиа добавить inline кнопку, так что придется отправить дополнительное сообщение
-        # с кнопкой
-        inline_update = InlineKeyboardButton(text=['Обновить', 'Аднавіць'][l], callback_data=data)
-        await bot.send_message(user_id,
-                               text=['Нажмите на кнопку или отправьте любое сообщение, что бы обновить расписание',
-                                     'Націсніце на кнопку або адпраўце любое паведамленне, каб абнавіць расклад'][l],
-                               reply_markup=InlineKeyboardMarkup(inline_keyboard=[[inline_update]]))
-    except:  # действия, в случаи ошибки
+    except Exception as e:  # действия, в случаи ошибки
+        print(e)
         await bot.send_message(user_id, ['Ошибка 404. Страница не найдена', 'Памылка 404. Старонка не знойдзена'][l])
     sql_stat(name, data)  # заносим данные об запросе в базу данных
 
