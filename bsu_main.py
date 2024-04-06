@@ -185,29 +185,42 @@ async def callback_mode(callback: types.CallbackQuery):
 
 @dp.message(Command('setting'))
 async def command_mode(message: Message) -> None:
-    await message.answer('в разработке')
+    user_id = message.from_user.id
     name = name_fuc(message.from_user.username, message.from_user.first_name)
+    link = sql_saved_message(name, user_id, 0)
+    l = 'белорусский' if sql_mode_or_language(user_id, 'language') else 'русский'
+    mode = 'png' if sql_mode_or_language(user_id, 'mode') else 'pdf'
+    await message.answer(f'id: {user_id}\n'
+                         f'Сохраненное расписание: {link}\n'
+                         f'Язык: {l}\n'
+                         f'Режим: {mode}')
     print(f'{Fore.RED}setting{Style.RESET_ALL} by {Fore.BLUE}{name}{Style.RESET_ALL} at {now()}')
 
 
-help_message = ['Данный телеграмм бот предоставляет удобный доступ к расписанию филфака БГУ. Просто'
-                'отправьте команду /start, после чего выберете нужное для вас расписание. После отправки '
+help_message = ['Данный телеграмм бот предоставляет удобный доступ к расписанию филфака БГУ. Просто '
+                'отправьте команду /start и выберете нужное для вас расписание. После отправки '
                 'любого сообщения бот будет отправлять последние выбранное сообщение. Под отправленным сообщением будет'
                 ' кнопка "обновить", при нажатии на которую будет присылаться выше расположенное расписание.\n\n'
+                'Команды:\n'
                 '/start - вызывает меню для выбора расписания\n'
                 '/help - сообщение для получения помощи\n'
                 '/language - поскольку заказчик разговаривает на белорусском языке, то пришлось добавить смену языка\n'
+                '/mode - меняет режим. Всего доступно два режима: pdf и png\n'
+                '/setting - сообщение, где вы можете посмотреть ваши настройки\n'
                 '/stat - игрушка админа (в разработке)\n\n'
-                'Если бот перестал работать писать сюда: @gvb3a',
-                'Гэты тэлеграм бот дае зручны доступ да раскладу філфака БДУ. Проста'
-                'Адпраўце каманду / start, пасля чаго вылучыце патрэбны для вас расклад. Пасля адпраўкі '
-                'любога паведамлення бот будзе адпраўляць апошнія абранае паведамленне. Пад адпраўленым паведамленнем '
-                'будзе кнопка "абнавіць", пры націску на якую будзе дасылацца вышэй размешчаны расклад.\n\n'
-                '/start - выклікае меню для выбару раскладу\n'
-                '/help - паведамленне для атрымання дапамогі\n'
-                '/language - паколькі заказчык размаўляе на беларускай мове, то прыйшлося дадаць змену мовы\n'
-                '/stat - цацка адміна (у распрацоўцы)\n\n'
-                'Калі бот перастаў працаваць пісаць сюды: @gvb3a']
+                'Если бот перестал работать, то писать сюда: @gvb3a',
+                'Гэты тэлеграм бот дае зручны доступ да раскладу філфака БДУ. Проста '
+                 'Дашліце каманду /start і вылучыце патрэбны для вас расклад. Пасля адпраўкі '
+                 'любога паведамлення бот будзе адпраўляць апошнія абранае паведамленне. Пад адпраўленым паведамленнем '
+                 'будзе кнопка "абнавіць", пры націску на якую будзе дасылацца вышэй размешчаны расклад.\n\n'
+                 'Каманды:\n'
+                 '/start - выклікае меню для выбару раскладу\n'
+                 '/help - паведамленне для атрымання дапамогі\n'
+                 '/language - паколькі заказчык размаўляе на беларускай мове, то прыйшлося дадаць змену мовы\n'
+                 '/mode - мяняе рэжым. Усяго даступна два рэжыму: pdf і png\n'
+                 '/setting - паведамленне, дзе вы можаце паглядзець вашыя наладкі\n'
+                 '/stat - цацка адміна (у распрацоўцы)\n\n'
+                 'Калі бот перастаў працаваць, то пісаць сюды: @gvb3a']
 
 
 @dp.message(Command('help'))
@@ -221,10 +234,11 @@ async def command_help(message: Message) -> None:
 @dp.message(Command('stat'))
 async def command_stat(message: Message) -> None:
     await message.answer('Загрузка...')
-    name = plot()
-    await message.answer_photo(photo=FSInputFile(f'{name}.png'))
+    file_name = plot()
+    await message.answer_photo(photo=FSInputFile(f'{file_name}.png'))
     await bot.delete_message(chat_id=message.chat.id, message_id=message.message_id + 1)
-    remove(f'{name}.png')
+    remove(f'{file_name}.png')
+    name = name_fuc(message.from_user.username, message.from_user.first_name)
     print(f'{Fore.RED}stat{Style.RESET_ALL} by {Fore.BLUE}{name}{Style.RESET_ALL} at {now()}')
 
 
@@ -239,9 +253,8 @@ async def callback_data(callback: types.CallbackQuery):
                                          reply_markup=create_main_inline_keyboard(l, data))
         await callback.answer()
     else:
-        await main(data, callback.from_user.id, callback.id, l, name)
+        await main(data, callback.from_user.id, callback.id, l, name, 'new message')
         await callback.answer()
-        sql_saved_message(callback.from_user.username, callback.from_user.id, data)
         print(f'{Fore.GREEN}{data}{Style.RESET_ALL} by {Fore.BLUE}{name}{Style.RESET_ALL} at {now()}')
 
 
@@ -255,11 +268,11 @@ async def main_handler(message: types.Message) -> None:
         await message.answer(['Ваше сохраненное расписание не обнаружено. Скорее всего, админ сбросил базу данных. Используйте команду /start и заново выберите расписание',
                               'Ваш захаваны расклад не выяўлены. Хутчэй за ўсё, адмін скінуў базу дадзеных. Выкарыстоўвайце каманду /start і зноўку абярыце расклад'][l])
     else:
-        await main(link, user_id, message.message_id, l, name)
+        await main(link, user_id, message.message_id, l, name, 'new message')
     print(f'{Fore.GREEN}{link}{Style.RESET_ALL} by {Fore.BLUE}{name}{Style.RESET_ALL} at {now()}')
 
 
-async def main(data, user_id, message_id, l, name):
+async def main(data, user_id, message_id, l, name, update_or_new):
     try:  # при возникновении ошибки (к примеру, файл не найден) этот код прекратиться
         disable_warnings()  # без этого вылезает предупреждение, что сайт филфака бгу не безопасен)
         response = requests.get(f'https://philology.bsu.by/files/dnevnoe/{data}.pdf', verify=False)
@@ -273,11 +286,12 @@ async def main(data, user_id, message_id, l, name):
         # Тут я расшифровываю путь. В словаре main_dict находятся значения raspisanie, USRDO, zachet и sesia
         # В sup_dict - bel, rus, slav, klassiki, rom-germ, vost. В cap[0] - курс
         caption = main_dict[data.split('/')[0]][l] + sup_dict[cap[1]][l] + ' ' + cap[0] + ' курс'
-
-        inline_update = [InlineKeyboardButton(text=['Обновить', 'Аднавіць'][l], callback_data=data)]
+        mode = sql_mode_or_language(user_id, 'mode')
+        inline_update = [InlineKeyboardButton(text=['Обновить', 'Аднавіць'][l],
+                                              callback_data=f'{data}')]
         inline_update_keyboard = InlineKeyboardMarkup(inline_keyboard=[inline_update])
 
-        if sql_mode_or_language(user_id, 'mode') == 1:
+        if mode == 1:
             doc = fitz.open(f'{name_file}_{message_id}.pdf')  # начинается магия по преобразованию pdf в png
             photos = []  # Тут будут храниться фотки. Нужно их занести в список
             count = len(doc)  # количество страниц
@@ -291,16 +305,12 @@ async def main(data, user_id, message_id, l, name):
                                               caption=caption if i == 0 else None))  # добавляем в список
             doc.close()  # Закрываем документ. Иначе мы не сможем с ним взаимодействовать
 
-            if count == 1:
-                await bot.send_photo(user_id, photo=FSInputFile(f"{name_file}_{message_id}_{1}.png"), caption=caption,
-                                     reply_markup=InlineKeyboardMarkup(inline_keyboard=[inline_update]))
-            else:
-                inline_back = [InlineKeyboardButton(text='Меню', callback_data='back')]
-                await bot.send_media_group(user_id, media=photos)  # отправляем фотки
-                await bot.send_message(user_id, text=
-                                       ['Нажмите на кнопку или отправьте любое сообщение, что бы обновить расписание',
-                                        'Націсніце на кнопку або адпраўце любое паведамленне, каб абнавіць расклад'][l],
-                                       reply_markup=InlineKeyboardMarkup(inline_keyboard=[inline_update, inline_back]))
+            inline_back = [InlineKeyboardButton(text='Меню', callback_data='back')]
+            await bot.send_media_group(user_id, media=photos)  # отправляем фотки
+            await bot.send_message(user_id, text=
+                                    ['Нажмите на кнопку или отправьте любое сообщение, что бы обновить расписание',
+                                    'Націсніце на кнопку або адпраўце любое паведамленне, каб абнавіць расклад'][l],
+                                    reply_markup=InlineKeyboardMarkup(inline_keyboard=[inline_update, inline_back]))
 
             for i in range(count):  # удаляем фотки
                 remove(f'{name_file}_{message_id}_{i + 1}.png')
@@ -309,8 +319,7 @@ async def main(data, user_id, message_id, l, name):
             await bot.send_document(user_id, document=doc, reply_markup=inline_update_keyboard, caption=caption)
         remove(f'{name_file}_{message_id}.pdf')  # удаляем pdf
 
-    except Exception as e:  # действия, в случаи ошибки
-        print(e)
+    except:  # действия, в случаи ошибки
         await bot.send_message(user_id, ['Ошибка 404. Страница не найдена', 'Памылка 404. Старонка не знойдзена'][l])
     sql_stat(name, data)  # заносим данные об запросе в базу данных
 
