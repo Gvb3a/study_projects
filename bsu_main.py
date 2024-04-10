@@ -183,18 +183,60 @@ async def callback_mode(callback: types.CallbackQuery):
     print(f'{Fore.YELLOW}mode{Style.RESET_ALL} by {Fore.BLUE}{name}{Style.RESET_ALL} at {now()}')
 
 
+def setting_inline_keyboard(l):
+    language = [InlineKeyboardButton(text=['Изменить язык', 'Змяніць мову'][l], callback_data='setting-language')]
+    mode = [InlineKeyboardButton(text=['Изменить режим', 'Змяніць рэжым'][l], callback_data='setting-mode')]
+    back = [InlineKeyboardButton(text=['Изменить расписание', 'Змяніць расклад'][l], callback_data='back')]
+    return InlineKeyboardMarkup(inline_keyboard=[language, mode, back])
+
+
 @dp.message(Command('setting'))
 async def command_mode(message: Message) -> None:
     user_id = message.from_user.id
     name = name_fuc(message.from_user.username, message.from_user.first_name)
     link = sql_saved_message(name, user_id, 0)
-    l = 'белорусский' if sql_mode_or_language(user_id, 'language') else 'русский'
-    mode = 'png' if sql_mode_or_language(user_id, 'mode') else 'pdf'
+    l = sql_mode_or_language(user_id, 'language')
+    language = ['Язык: русский', 'Мова: беларуская'][l]
+    saved_message = ['Сохраненное расписание:', 'Захаваны расклад:'][l] + link
+    m = 'png' if sql_mode_or_language(user_id, 'mode') else 'pdf'
+    mode = [f'Режим: {m}', f'Рэжым {m}'][l]
     await message.answer(f'id: {user_id}\n'
-                         f'Сохраненное расписание: {link}\n'
-                         f'Язык: {l}\n'
-                         f'Режим: {mode}')
+                         f'{saved_message}\n'
+                         f'{language}\n'
+                         f'{mode}', reply_markup=setting_inline_keyboard(l))
     print(f'{Fore.RED}setting{Style.RESET_ALL} by {Fore.BLUE}{name}{Style.RESET_ALL} at {now()}')
+
+
+@dp.callback_query(F.data == 'setting-language')
+async def callback_mode(callback: types.CallbackQuery):
+    user_id = callback.from_user.id
+    name = name_fuc(callback.from_user.username, callback.from_user.first_name)
+    link = sql_saved_message(name, user_id, 0)
+    l = sql_change_mode_or_language(user_id, 'language')
+    language = ['Язык: русский', 'Мова: беларуская'][l]
+    saved_message = ['Сохраненное расписание:', 'Захаваны расклад:'][l] + link
+    m = 'png' if sql_mode_or_language(user_id, 'mode') else 'pdf'
+    mode = [f'Режим: {m}', f'Рэжым {m}'][l]
+    await callback.message.edit_text(f'id: {user_id}\n'
+                                    f'{saved_message}\n'
+                                    f'{language}\n'
+                                    f'{mode}', reply_markup=setting_inline_keyboard(l))
+
+
+@dp.callback_query(F.data == 'setting-mode')
+async def callback_mode(callback: types.CallbackQuery):
+    user_id = callback.from_user.id
+    name = name_fuc(callback.from_user.username, callback.from_user.first_name)
+    link = sql_saved_message(name, user_id, 0)
+    l = sql_mode_or_language(user_id, 'mode')
+    language = ['Язык: русский', 'Мова: беларуская'][l]
+    saved_message = ['Сохраненное расписание:', 'Захаваны расклад:'][l] + link
+    m = 'png' if sql_change_mode_or_language(user_id, 'mode') else 'pdf'
+    mode = [f'Режим: {m}', f'Рэжым {m}'][l]
+    await callback.message.edit_text(f'id: {user_id}\n'
+                                    f'{saved_message}\n'
+                                    f'{language}\n'
+                                    f'{mode}', reply_markup=setting_inline_keyboard(l))
 
 
 help_message = ['Данный телеграмм бот предоставляет удобный доступ к расписанию филфака БГУ. Просто '
@@ -210,17 +252,17 @@ help_message = ['Данный телеграмм бот предоставляе
                 '/stat - игрушка админа (в разработке)\n\n'
                 'Если бот перестал работать, то писать сюда: @gvb3a',
                 'Гэты тэлеграм бот дае зручны доступ да раскладу філфака БДУ. Проста '
-                 'Дашліце каманду /start і вылучыце патрэбны для вас расклад. Пасля адпраўкі '
-                 'любога паведамлення бот будзе адпраўляць апошнія абранае паведамленне. Пад адпраўленым паведамленнем '
-                 'будзе кнопка "абнавіць", пры націску на якую будзе дасылацца вышэй размешчаны расклад.\n\n'
-                 'Каманды:\n'
-                 '/start - выклікае меню для выбару раскладу\n'
-                 '/help - паведамленне для атрымання дапамогі\n'
-                 '/language - паколькі заказчык размаўляе на беларускай мове, то прыйшлося дадаць змену мовы\n'
-                 '/mode - мяняе рэжым. Усяго даступна два рэжыму: pdf і png\n'
-                 '/setting - паведамленне, дзе вы можаце паглядзець вашыя наладкі\n'
-                 '/stat - цацка адміна (у распрацоўцы)\n\n'
-                 'Калі бот перастаў працаваць, то пісаць сюды: @gvb3a']
+                'Дашліце каманду /start і вылучыце патрэбны для вас расклад. Пасля адпраўкі '
+                'любога паведамлення бот будзе адпраўляць апошнія абранае паведамленне. Пад адпраўленым паведамленнем '
+                'будзе кнопка "абнавіць", пры націску на якую будзе дасылацца вышэй размешчаны расклад.\n\n'
+                'Каманды:\n'
+                '/start - выклікае меню для выбару раскладу\n'
+                '/help - паведамленне для атрымання дапамогі\n'
+                '/language - паколькі заказчык размаўляе на беларускай мове, то прыйшлося дадаць змену мовы\n'
+                '/mode - мяняе рэжым. Усяго даступна два рэжыму: pdf і png\n'
+                '/setting - паведамленне, дзе вы можаце паглядзець вашыя наладкі\n'
+                '/stat - цацка адміна (у распрацоўцы)\n\n'
+                'Калі бот перастаў працаваць, то пісаць сюды: @gvb3a']
 
 
 @dp.message(Command('help'))
