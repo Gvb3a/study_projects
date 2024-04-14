@@ -313,12 +313,12 @@ async def main_handler(message: types.Message) -> None:
         await message.answer(['Ваше сохраненное расписание не обнаружено. Скорее всего, админ сбросил базу данных. Используйте команду /start и заново выберите расписание',
                               'Ваш захаваны расклад не выяўлены. Хутчэй за ўсё, адмін скінуў базу дадзеных. Выкарыстоўвайце каманду /start і зноўку абярыце расклад'][l])
     else:
-        await main(link, user_id, message.message_id, l, name, 'new message')
+        await main(link, user_id, message.message_id, l, name)
     print(f'{link} by {name} at {now()}')
     # print(f'{Fore.GREEN}{link}{Style.RESET_ALL} by {Fore.BLUE}{name}{Style.RESET_ALL} at {now()}')
 
 
-async def main(data, user_id, message_id, l, name, update_or_new):
+async def main(data, user_id, message_id, l, name):
     try:  # при возникновении ошибки (к примеру, файл не найден) этот код прекратиться
         disable_warnings()  # без этого вылезает предупреждение, что сайт филфака бгу не безопасен)
         response = requests.get(f'https://philology.bsu.by/files/dnevnoe/{data}.pdf', verify=False)
@@ -376,9 +376,8 @@ if __name__ == '__main__':
     print(f'The bot launches at {now()}')
     # print(f'The bot {Fore.RED}launches{Style.RESET_ALL} at {now()}')  # сообщение о запуске
 
-    async def main():
+    async def main_launches():
         await dp.start_polling(bot)
 
 
-    asyncio.run(main())
-    
+    asyncio.run(main_launches())
