@@ -1,6 +1,7 @@
 import fitz
 import requests
 import datetime
+import asyncio
 
 from urllib3 import disable_warnings
 from os import remove
@@ -12,7 +13,7 @@ from aiogram.client.session.aiohttp import AiohttpSession
 
 from bsu_sql import sql_launch, sql_mode_or_language, sql_saved_message, sql_change_mode_or_language, sql_stat, plot
 
-init()
+# init()
 # код в комментариях предназначен для pythonanywhere(онлайн-хостинг)
 # session = AiohttpSession(proxy="http://proxy.server:3128")
 bot_token = 'bot_token'  # https://t.me/BotFather
@@ -111,17 +112,13 @@ def now():  # узнаем время, учитывая временной по�
     current_time = datetime.datetime.now(datetime.timezone.utc) + delta
     return current_time.strftime("%H:%M:%S %d.%m.%Y")
 
-
-def name_fuc(username, name):  # функция для username. Просто когда username будет недоступен, возвращаем name
-    return username if username is not None else name
-
-
 @dp.message(CommandStart())  # Обработчик команды /start. Вызывает меню выбора
 async def command_start_handler(message: Message) -> None:
     l = sql_mode_or_language(message.from_user.id, 'language')  # из базы данных узнаем язык пользователя
     await message.answer(text=start_list[l], reply_markup=start_keyboard(l))
-    name = name_fuc(message.from_user.username, message.from_user.first_name)
-    print(f'{Fore.RED}start{Style.RESET_ALL} by {Fore.BLUE}{name}{Style.RESET_ALL} at {now()}')
+    name = f'{message.from_user.full_name}({message.from_user.username})'
+    print(f'start by {name} at {now()}')
+    # print(f'{Fore.RED}start{Style.RESET_ALL} by {Fore.BLUE}{name}{Style.RESET_ALL} at {now()}')
 
 
 @dp.callback_query(F.data == 'text')  # реакция, при нажатии на декоративные кнопки
@@ -147,8 +144,9 @@ async def command_language(message: Message) -> None:
     l = sql_change_mode_or_language(user_id, 'language')  # меняем язык и узнаем его
     text = ['Язык был изменен', 'Мова была зменена'][l]
     await message.answer(text=text, reply_markup=inline_mode_language(l, 'language'))
-    name = name_fuc(message.from_user.username, message.from_user.first_name)
-    print(f'{Fore.RED}language{Style.RESET_ALL} by {Fore.BLUE}{name}{Style.RESET_ALL} at {now()}')
+    name = f'{message.from_user.full_name}({message.from_user.username})'
+    print(f'language by {name} at {now()}')
+    # print(f'{Fore.RED}language{Style.RESET_ALL} by {Fore.BLUE}{name}{Style.RESET_ALL} at {now()}')
 
 
 @dp.callback_query(F.data == 'language')  # при нажатии на кнопку смены языка
@@ -157,8 +155,9 @@ async def callback_language(callback: types.CallbackQuery):
     l = sql_change_mode_or_language(user_id, 'language')
     text = ['Язык был изменен', 'Мова была зменена'][l]
     await callback.message.edit_text(text=text, reply_markup=inline_mode_language(l, 'language'))
-    name = name_fuc(callback.from_user.username, callback.from_user.first_name)
-    print(f'{Fore.YELLOW}language{Style.RESET_ALL} by {Fore.BLUE}{name}{Style.RESET_ALL} at {now()}')
+    name = f'{callback.from_user.full_name}({callback.from_user.username})'
+    print(f'callback language by {name} at {now()}')
+    # print(f'{Fore.YELLOW}language{Style.RESET_ALL} by {Fore.BLUE}{name}{Style.RESET_ALL} at {now()}')
 
 
 @dp.message(Command('mode'))
@@ -168,8 +167,9 @@ async def command_mode(message: Message) -> None:
     text = (f"{['режим изменен на', 'Рэжым зменены на'][l]} "
             f"{['pdf', 'png'][sql_change_mode_or_language(user_id, 'mode')]}")
     await message.answer(text=text, reply_markup=inline_mode_language(l, 'mode'))
-    name = name_fuc(message.from_user.username, message.from_user.first_name)
-    print(f'{Fore.RED}mode{Style.RESET_ALL} by {Fore.BLUE}{name}{Style.RESET_ALL} at {now()}')
+    name = f'{message.from_user.full_name}({message.from_user.username})'
+    print(f'mode by {name} at {now()}')
+    # print(f'{Fore.RED}mode{Style.RESET_ALL} by {Fore.BLUE}{name}{Style.RESET_ALL} at {now()}')
 
 
 @dp.callback_query(F.data == 'mode')
@@ -179,8 +179,9 @@ async def callback_mode(callback: types.CallbackQuery):
     text = (f"{['Режим изменен на', 'Рэжым зменены на'][l]} "
             f"{['pdf', 'png'][sql_change_mode_or_language(user_id, 'mode')]}")
     await callback.message.edit_text(text=text, reply_markup=inline_mode_language(l, 'mode'))
-    name = name_fuc(callback.from_user.username, callback.from_user.first_name)
-    print(f'{Fore.YELLOW}mode{Style.RESET_ALL} by {Fore.BLUE}{name}{Style.RESET_ALL} at {now()}')
+    name = f'{callback.from_user.full_name}({callback.from_user.username})'
+    print(f'callback mode by {name} at {now()}')
+    # print(f'{Fore.YELLOW}mode{Style.RESET_ALL} by {Fore.BLUE}{name}{Style.RESET_ALL} at {now()}')
 
 
 def setting_inline_keyboard(l):
@@ -193,7 +194,7 @@ def setting_inline_keyboard(l):
 @dp.message(Command('setting'))
 async def command_mode(message: Message) -> None:
     user_id = message.from_user.id
-    name = name_fuc(message.from_user.username, message.from_user.first_name)
+    name = f'{message.from_user.full_name}({message.from_user.username})'
     link = sql_saved_message(name, user_id, 0)
     l = sql_mode_or_language(user_id, 'language')
     language = ['Язык: русский', 'Мова: беларуская'][l]
@@ -204,13 +205,14 @@ async def command_mode(message: Message) -> None:
                          f'{saved_message}\n'
                          f'{language}\n'
                          f'{mode}', reply_markup=setting_inline_keyboard(l))
-    print(f'{Fore.RED}setting{Style.RESET_ALL} by {Fore.BLUE}{name}{Style.RESET_ALL} at {now()}')
+    print(f'setting by {name} at {now()}')
+    # print(f'{Fore.RED}setting{Style.RESET_ALL} by {Fore.BLUE}{name}{Style.RESET_ALL} at {now()}')
 
 
 @dp.callback_query(F.data == 'setting-language')
 async def callback_mode(callback: types.CallbackQuery):
     user_id = callback.from_user.id
-    name = name_fuc(callback.from_user.username, callback.from_user.first_name)
+    name = f'{callback.from_user.full_name}({callback.from_user.username})'
     link = sql_saved_message(name, user_id, 0)
     l = sql_change_mode_or_language(user_id, 'language')
     language = ['Язык: русский', 'Мова: беларуская'][l]
@@ -226,7 +228,7 @@ async def callback_mode(callback: types.CallbackQuery):
 @dp.callback_query(F.data == 'setting-mode')
 async def callback_mode(callback: types.CallbackQuery):
     user_id = callback.from_user.id
-    name = name_fuc(callback.from_user.username, callback.from_user.first_name)
+    name = f'{callback.from_user.full_name}({callback.from_user.username})'
     link = sql_saved_message(name, user_id, 0)
     l = sql_mode_or_language(user_id, 'mode')
     language = ['Язык: русский', 'Мова: беларуская'][l]
@@ -267,8 +269,9 @@ help_message = ['Данный телеграмм бот предоставляе
 async def command_help(message: Message) -> None:
     l = sql_mode_or_language(message.from_user.id, 'language')
     await message.answer(help_message[l])
-    name = name_fuc(message.from_user.username, message.from_user.first_name)
-    print(f'{Fore.RED}help{Style.RESET_ALL} by {Fore.BLUE}{name}{Style.RESET_ALL} at {now()}')
+    name = f'{message.from_user.full_name}({message.from_user.username})'
+    print(f'help by {name} at {now()}')
+    # print(f'{Fore.RED}help{Style.RESET_ALL} by {Fore.BLUE}{name}{Style.RESET_ALL} at {now()}')
 
 
 @dp.message(Command('stat'))
@@ -278,15 +281,16 @@ async def command_stat(message: Message) -> None:
     await message.answer_photo(photo=FSInputFile(f'{file_name}.png'))
     await bot.delete_message(chat_id=message.chat.id, message_id=message.message_id + 1)
     remove(f'{file_name}.png')
-    name = name_fuc(message.from_user.username, message.from_user.first_name)
-    print(f'{Fore.RED}stat{Style.RESET_ALL} by {Fore.BLUE}{name}{Style.RESET_ALL} at {now()}')
+    name = f'{message.from_user.full_name}({message.from_user.username})'
+    print(f'stat by {name} at {now()}')
+    # print(f'{Fore.RED}stat{Style.RESET_ALL} by {Fore.BLUE}{name}{Style.RESET_ALL} at {now()}')
 
 
 @dp.callback_query(F.data)
 async def callback_data(callback: types.CallbackQuery):
     data = callback.data
     l = sql_mode_or_language(callback.from_user.id, 'language')
-    name = name_fuc(callback.from_user.username, callback.from_user.first_name)
+    name = f'{callback.from_user.full_name}({callback.from_user.username})'
     if data[:6] == 'inline':
         data = data[7:]
         await callback.message.edit_text(text=main_dict[data][l]+['Выберете специальность', 'Абярыце спецыяльнасць'][l],
@@ -295,12 +299,13 @@ async def callback_data(callback: types.CallbackQuery):
     else:
         await main(data, callback.from_user.id, callback.id, l, name, 'new message')
         await callback.answer()
-        print(f'{Fore.GREEN}{data}{Style.RESET_ALL} by {Fore.BLUE}{name}{Style.RESET_ALL} at {now()}')
+        print(f'{data} by {name} at {now()}')
+        # print(f'{Fore.GREEN}{data}{Style.RESET_ALL} by {Fore.BLUE}{name}{Style.RESET_ALL} at {now()}')
 
 
 @dp.message()
 async def main_handler(message: types.Message) -> None:
-    name = name_fuc(message.from_user.username, message.from_user.first_name)
+    name = f'{message.from_user.full_name}({message.from_user.username})'
     user_id = message.from_user.id
     link = sql_saved_message(name, user_id, 0)
     l = sql_mode_or_language(user_id, 'language')
@@ -309,7 +314,8 @@ async def main_handler(message: types.Message) -> None:
                               'Ваш захаваны расклад не выяўлены. Хутчэй за ўсё, адмін скінуў базу дадзеных. Выкарыстоўвайце каманду /start і зноўку абярыце расклад'][l])
     else:
         await main(link, user_id, message.message_id, l, name, 'new message')
-    print(f'{Fore.GREEN}{link}{Style.RESET_ALL} by {Fore.BLUE}{name}{Style.RESET_ALL} at {now()}')
+    print(f'{link} by {name} at {now()}')
+    # print(f'{Fore.GREEN}{link}{Style.RESET_ALL} by {Fore.BLUE}{name}{Style.RESET_ALL} at {now()}')
 
 
 async def main(data, user_id, message_id, l, name, update_or_new):
@@ -367,5 +373,12 @@ async def main(data, user_id, message_id, l, name, update_or_new):
 # запуск бота
 if __name__ == '__main__':
     sql_launch()  # проверка базы данных
-    print(f'The bot {Fore.RED}launches{Style.RESET_ALL} at {now()}')  # сообщение о запуске
-    dp.run_polling(bot)
+    print(f'The bot launches at {now()}')
+    # print(f'The bot {Fore.RED}launches{Style.RESET_ALL} at {now()}')  # сообщение о запуске
+
+    async def main():
+        await dp.start_polling(bot)
+
+
+    asyncio.run(main())
+    
