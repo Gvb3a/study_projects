@@ -297,7 +297,8 @@ async def callback_data(callback: types.CallbackQuery):
                                          reply_markup=create_main_inline_keyboard(l, data))
         await callback.answer()
     else:
-        await main(data, callback.from_user.id, callback.id, l, name, 'new message')
+        await main(data, callback.from_user.id, callback.id, l, name)
+        sql_saved_message(callback.from_user.username, callback.from_user.id, data)
         await callback.answer()
         print(f'{data} by {name} at {now()}')
         # print(f'{Fore.GREEN}{data}{Style.RESET_ALL} by {Fore.BLUE}{name}{Style.RESET_ALL} at {now()}')
