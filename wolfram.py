@@ -3,6 +3,7 @@ from wolframclient.evaluation import WolframLanguageSession
 from wolframclient.language import wl, wlexpr
 from datetime import datetime
 from sys import exit
+from CTkMessagebox import CTkMessagebox
 
 
 try:
@@ -30,42 +31,55 @@ root = ctk.CTk()
 ctk.set_appearance_mode("Dark")
 ctk.set_default_color_theme("blue")
 root.title("Wolfram Calculator")
-root.geometry('640x210')
+root.geometry('640x220')
 root.resizable(False, True)  # the user will not be able to change the size of the window
 
 last_response = None  # 2-5+ -> error. To ensure that the user does not get an error during the input process, we save the last answer (2-5)
+last_request = ''
+
+
+def resize_window_to_fit():
+    root.update_idletasks()  # Обновить все задачи интерфейса
+    width = max(entry.winfo_width(), math_label.winfo_width(), btn.winfo_width(), autofill_label.winfo_width())
+    height = entry.winfo_height() + math_label.winfo_height() + btn.winfo_height() + autofill_label.winfo_height() + 60  # добавьте отступы
+    root.geometry(f"{width}x{height}")
+
 
 def on_key_release(event):  # function called each time the input field is updated
     current_text = text_var.get()  # get text
-    global last_response
+    global last_response, last_request
+
     start_time = datetime.now()
-    try:
-        wl_result = session.evaluate(wlexpr(current_text))
-        pretty_wl_result = session.evaluate(wl.ToString(wl_result, wl.InputForm))
-        if str(pretty_wl_result) == "$Failed":
-            raise ValueError("Incomplete expression; more input is needed")
-        else:
-            last_response = pretty_wl_result
-        print(pretty_wl_result)
-    except:
+    if last_request != current_text.strip():
+        last_request = current_text.strip()
+        try:
+            wl_result = session.evaluate(wlexpr(current_text))
+            pretty_wl_result = session.evaluate(wl.ToString(wl_result, wl.InputForm))
+            if str(pretty_wl_result) == "$Failed":
+                raise ValueError("Incomplete expression; more input is needed")
+            else:
+                last_response = pretty_wl_result
+        except:
+            pretty_wl_result = last_response
+    else:
         pretty_wl_result = last_response
 
-    labels[0].configure(text=str(last_response))
+    math_label.configure(text=pretty_wl_result)
 
     # for autofill
     index = entry.index("insert")  # we'll only take text up to the cursor
     auto_result = autocomplete(current_text[:index])
-    labels[1].configure(text=", ".join(auto_result))
+    autofill_label.configure(text=", ".join(auto_result))
 
 
-    print(f'{current_text} -> {pretty_wl_result}. Suggestions: {auto_result}. Time: {datetime.now()-start_time}')
+    print(f'{current_text} >>> {pretty_wl_result}. Suggestions: {auto_result}. Time: {datetime.now()-start_time}')
 
 
 def copy_to_clipboard(event):
     root.clipboard_clear()
-    root.clipboard_append(labels[0].cget("text"))
+    root.clipboard_append(math_label.cget("text"))
     root.update()
-    # root.iconify()
+    root.iconify()
 
 
 def on_close():  # need to terminate the session and had to tie this to the closing of the window
@@ -94,7 +108,7 @@ def autocomplete(text):
 
 
 def select_autocomplete(event):
-    suggestions = labels[1].cget("text").split(", ")
+    suggestions = autofill_label.cget("text").split(", ")
     if suggestions:
         index = entry.index("insert")
         text = text_var.get()
@@ -102,8 +116,28 @@ def select_autocomplete(event):
         first_index = text.rindex(last_uppercase_letter)
         entry.delete(first_index, index)
         entry.insert(entry.index("insert"), suggestions[0])
-        labels[1].configure(text="")
+        autofill_label.configure(text="")
         return 'break'
+
+
+first_wolfram_alpha = True  # It's even worse here. The first query takes a very long time (4-5 seconds)
+def ask_wolfram_alpha():
+    global first_wolfram_alpha
+    if first_wolfram_alpha:
+        msg = CTkMessagebox(title="Info", message="The first request will be longer than the next. Please wait.",
+                            options=['Cancel', 'OK'])
+        if msg.get() == 'OK':
+            first_wolfram_alpha = False
+        else:
+            return
+
+
+    answer_label = ctk.CTkLabel(root, text='answer', font=("Arial", 16), wraplength=600)
+    answer_label.pack(pady=10, padx=10, fill='x')
+
+    resize_window_to_fit()
+    autofill_label.pack_forget()
+    autofill_label.pack(pady=10, padx=10, fill='x')
 
 
 dictionary = ['AbsoluteTiming', 'Solve', 'Sqrt', 'Factor', 'N', 'NSolve', 'ScientificForm', 'Clear']
@@ -114,23 +148,21 @@ text_var = ctk.StringVar()
 entry = ctk.CTkEntry(root, textvariable=text_var, font=("Arial", 16), height=40)
 entry.pack(pady=10, padx=10, fill='x')
 
+math_label = ctk.CTkLabel(root, text='Write to ask Mathematica', font=("Arial", 16), wraplength=600)
+math_label.pack(pady=10, padx=10, fill='x')
 
-labels = []
-label_text = ['Write to ask Mathematica', 'This will be the autofill for Mathematica commands']
-for i in range(2):
-    label = ctk.CTkLabel(root, text=label_text[i], font=("Arial", 16), wraplength=600)
-    label.pack(pady=10, padx=10, fill='x')
-    labels.append(label)
-
-btn = ctk.CTkButton(root, text='Ask WolframAlpha', font=("Arial", 16), height=35, corner_radius=16)
+btn = ctk.CTkButton(root, text='Ask WolframAlpha', font=("Arial", 16), height=40, corner_radius=16, command=ask_wolfram_alpha)
 btn.pack(pady=10, padx=10, fill='x')
+
+autofill_label = ctk.CTkLabel(root, text='Autofill for Mathematica commands', font=("Arial", 16), wraplength=600)
+autofill_label.pack(pady=10, padx=10, fill='x')
 
 
 entry.bind('<KeyRelease>', on_key_release)  # any button in 'entry'
 entry.bind('<Return>', copy_to_clipboard)
 entry.bind('<Tab>', select_autocomplete)
 
-labels[0].bind('<Button-1>', copy_to_clipboard)
+math_label.bind('<Button-1>', copy_to_clipboard)
 
 root.protocol("WM_DELETE_WINDOW", on_close)
 
