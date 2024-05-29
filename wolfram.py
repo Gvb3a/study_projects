@@ -4,6 +4,7 @@ from wolframclient.language import wl, wlexpr
 from datetime import datetime
 from sys import exit
 from CTkMessagebox import CTkMessagebox
+from random import randint
 
 try:
     session = WolframLanguageSession('D:\\Wolfram\\Mathematica\\WolframKernel.exe')
@@ -29,7 +30,7 @@ root = ctk.CTk()
 ctk.set_appearance_mode("Dark")
 ctk.set_default_color_theme("blue")
 root.title("Wolfram Calculator")
-root.geometry('640x220')
+root.geometry('640x280')
 root.resizable(False, False)
 
 last_response = None
@@ -40,20 +41,20 @@ answer_label = None
 def resize_window_to_fit():
     root.update_idletasks()  # Update all "idle" tasks in the GUI
     width = 640
-    height = entry.winfo_reqheight() + math_label.winfo_reqheight() + btn.winfo_reqheight() + 40  # Add padding
+    height = entry.winfo_reqheight() + math_label.winfo_reqheight() + btn.winfo_reqheight() + answer_window_btn.winfo_reqheight() + 40
 
     # Ensure minimum height for autofill_label
-    autofill_label_height = autofill_label.winfo_reqheight() + 40 if autofill_label.cget("text") else 20
+    autofill_label_height = autofill_label.winfo_reqheight() + 40 if autofill_label.cget("text") else 40
     height += autofill_label_height
 
     if answer_label:
-        height += answer_label.winfo_reqheight() + 10  # Add padding for the answer label
+        height += answer_label.winfo_reqheight() + 20  # Add padding for the answer label
 
     root.geometry(f"{width}x{height}")
 
 
 def on_key_release(event):  # Function called each time the input field is updated
-    current_text = text_var.get()  # Get text
+    current_text = text_var.get()
     global last_response, last_request
 
     start_time = datetime.now()
@@ -68,8 +69,18 @@ def on_key_release(event):  # Function called each time the input field is updat
                 last_response = pretty_wl_result
         except:
             pretty_wl_result = last_response
+
+        if pretty_wl_result.startswith('Graphics'):
+            name = f'{randint(1, 2 ** 10)}.png'
+            try:
+                wl.Export(name, pretty_wl_result, "PNG")
+                print(f'Graphics: success, {name}')
+            except Exception as e:
+                print(f'Graphics: {e}')
+            pretty_wl_result = '-Graphics-'
     else:
         pretty_wl_result = last_response
+
 
     math_label.configure(text=pretty_wl_result)
     resize_window_to_fit()  # Resize window
@@ -135,9 +146,15 @@ first_wolfram_alpha = True  # The first query takes a very long time (4-5 second
 
 def ask_wolfram_alpha():
     global first_wolfram_alpha, answer_label
-    if first_wolfram_alpha:
+    request = text_var.get()
+
+    if request.strip() == '':
+        CTkMessagebox(title="Empty enquiry", icon="warning", message="Enter your enquiry!!!")
+        return
+
+    elif first_wolfram_alpha:
         msg = CTkMessagebox(title="Info", message="The first request will be longer than the next. Please wait.",
-                            options=['Cancel', 'OK'])
+                            options=['OK', 'Cancel'])
         if msg.get() == 'OK':
             session.evaluate(wl.WolframAlpha('1'))
             first_wolfram_alpha = False
@@ -145,18 +162,21 @@ def ask_wolfram_alpha():
             return
 
     a = datetime.now()
-    request = text_var.get()
     result = session.evaluate(wl.WolframAlpha(request))
+
     for rule in result:
         if rule[0][0] == ('Result', 1) and rule[0][1] == 'Plaintext':
             answer = rule[1]
             break
+
     else:
-        print(result)
-        answer = 'Error'
+        try:
+            answer = result[1][1]
+        except:
+            answer = 'None'
 
     if not answer_label:
-        answer_label = ctk.CTkLabel(root, text=answer, font=("Arial", 16), wraplength=600)
+        answer_label = ctk.CTkLabel(root, text=answer, font=("Arial", 16), wraplength=600, height=40)
         answer_label.pack(pady=10, padx=10, fill='x', before=autofill_label)
     else:
         answer_label.configure(text=answer)
@@ -164,6 +184,9 @@ def ask_wolfram_alpha():
 
     print(f'WolframAlpha: {request} >>> {answer}. Time: {datetime.now()-a}')
 
+
+def answer_window():
+    CTkMessagebox(title="In development", icon="info", message="I'll do it tomorrow")
 
 dictionary = ['AbsoluteTiming', 'Solve', 'Sqrt', 'Factor', 'N', 'NSolve', 'ScientificForm', 'Clear']
 
@@ -179,6 +202,10 @@ math_label.pack(pady=10, padx=10, fill='x')
 btn = ctk.CTkButton(root, text='Ask WolframAlpha', font=("Arial", 16), height=40, corner_radius=16,
                     command=ask_wolfram_alpha)
 btn.pack(pady=10, padx=10, fill='x')
+
+answer_window_btn = ctk.CTkButton(root, text='Create a reply window', font=("Arial", 16), height=40, corner_radius=16,
+                                  command=answer_window)
+answer_window_btn.pack(pady=10, padx=10, fill='x')
 
 autofill_label = ctk.CTkLabel(root, text='Autofill for Mathematica commands', font=("Arial", 16), height=40, wraplength=600)
 autofill_label.pack(pady=10, padx=10, fill='x')
