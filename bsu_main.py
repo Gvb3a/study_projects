@@ -12,13 +12,13 @@ from aiogram.types import InputMediaPhoto, Message, CallbackQuery, FSInputFile, 
 from aiogram.client.session.aiohttp import AiohttpSession
 
 from bsu_sql import sql_launch, sql_mode_or_language, sql_saved_message, sql_change_mode_or_language, sql_stat, plot
+"""
+from .bsu_sql import sql_launch, sql_mode_or_language, sql_saved_message, sql_change_mode_or_language, sql_stat, plot
+"""
 
 # init()
-# код в комментариях предназначен для pythonanywhere(онлайн-хостинг)
-# session = AiohttpSession(proxy="http://proxy.server:3128")
-bot_token = 'bot_token'  # https://t.me/BotFather
+bot_token = ''  # https://t.me/BotFather
 bot = Bot(bot_token)
-# bot = Bot(bot_token, session=session)
 dp = Dispatcher()
 
 
@@ -45,38 +45,29 @@ def inline_button(path, speciality):  # генерация однотипных 
     return inline_list
 
 
+def inline_text_button(text, l):
+    return [InlineKeyboardButton(text=text[l], callback_data='text')]
+
 def create_main_inline_keyboard(l, path):
     # расписания хранятся по следующему пути:
     # https://philology.bsu.by/files/dnevnoe/{тип расписания}/{курс}_{специальность}.pdf
-    inline_belarusian_philology = [InlineKeyboardButton(text=['Белорусская филология', 'Беларуская філалогія'][l],
-                                                        callback_data='text')]
-    inline_russian_philology = [InlineKeyboardButton(text=['Русская филология', 'Руская філалогія'][l],
-                                                     callback_data='text')]
-    inline_slavic_philology = [InlineKeyboardButton(text=['Славянская филология', 'Славянская філалогія'][l],
-                                                    callback_data='text')]
-    inline_classical_philology = [InlineKeyboardButton(text=['Классическая  филология', 'Класічная  філалогія'][l],
-                                                       callback_data='text')]
     # на классической филологии только один набор
     inline_classical_philology_3 = [InlineKeyboardButton(text='3 курс', callback_data=f'{path}/3_klassiki')]
 
-    inline_romano_germanic_philology = [InlineKeyboardButton(text=['Романо-германская филология', 'Рамана-германская філалогія'][l],
-                                                             callback_data='text')]
-    inline_oriental_philology = [InlineKeyboardButton(text=['Восточная филология', 'Усходняя філалогія'][l],
-                                                      callback_data='text')]
     inline_back = [InlineKeyboardButton(text='Назад', callback_data='back')]
     inline_keyboard = InlineKeyboardMarkup(
     inline_keyboard=[
-    inline_belarusian_philology,
+    inline_text_button(['Белорусская филология', 'Беларуская філалогія'], l),
     inline_button(path, 'bel'),
-    inline_russian_philology,
+    inline_text_button(['Русская филология', 'Руская філалогія'], l),
     inline_button(path, 'rus'),
-    inline_slavic_philology,
+    inline_text_button(['Славянская филология', 'Славянская філалогія'], l),
     inline_button(path, 'slav'),
-    inline_classical_philology,
+    inline_text_button(['Классическая  филология', 'Класічная  філалогія'], l),
     inline_classical_philology_3,
-    inline_romano_germanic_philology,
+    inline_text_button(['Романо-германская филология', 'Рамана-германская філалогія'], l),
     inline_button(path, 'rom-germ'),
-    inline_oriental_philology,
+    inline_text_button(['Восточная филология', 'Усходняя філалогія'], l),
     inline_button(path, 'vost'),
     inline_back
     ])
@@ -112,6 +103,7 @@ def now():  # узнаем время, учитывая временной по�
     current_time = datetime.datetime.now(datetime.timezone.utc) + delta
     return current_time.strftime("%H:%M:%S %d.%m.%Y")
 
+
 @dp.message(CommandStart())  # Обработчик команды /start. Вызывает меню выбора
 async def command_start_handler(message: Message) -> None:
     l = sql_mode_or_language(message.from_user.id, 'language')  # из базы данных узнаем язык пользователя
@@ -123,7 +115,8 @@ async def command_start_handler(message: Message) -> None:
 
 @dp.callback_query(F.data == 'text')  # реакция, при нажатии на декоративные кнопки
 async def inline_text(callback: CallbackQuery):
-    await callback.answer(text=['Это исключительно декоративная кнопка', 'Гэта выключна дэкаратыўная кнопка'][sql_mode_or_language(callback.from_user.id, 'language')])
+    l = sql_mode_or_language(callback.from_user.id, 'language')
+    await callback.answer(text=['Это исключительно декоративная кнопка', 'Гэта выключна дэкаратыўная кнопка'][l])
 
 
 @dp.callback_query(F.data == 'back')   # воссоздает то же меню, что и /start
@@ -164,7 +157,7 @@ async def callback_language(callback: types.CallbackQuery):
 async def command_mode(message: Message) -> None:
     user_id = message.from_user.id
     l = sql_mode_or_language(user_id, 'language')
-    text = (f"{['режим изменен на', 'Рэжым зменены на'][l]} "
+    text = (f"{['Режим изменен на', 'Рэжым зменены на'][l]} "
             f"{['pdf', 'png'][sql_change_mode_or_language(user_id, 'mode')]}")
     await message.answer(text=text, reply_markup=inline_mode_language(l, 'mode'))
     name = f'{message.from_user.full_name}({message.from_user.username})'
@@ -350,7 +343,7 @@ async def main(data, user_id, message_id, l, name):
                 pix.save(f"{name_file}_{message_id}_{i + 1}.png")  # сохраняем файл
                 photos.append(InputMediaPhoto(media=FSInputFile(f"{name_file}_{message_id}_{i + 1}.png"),
                                               caption=caption if i == 0 else None))  # добавляем в список
-            doc.close()  # Закрываем документ. Иначе мы не сможем с ним взаимодействовать
+            doc.close()  # Закрываем документ. Иначе мы не сможем его удалить
 
             inline_back = [InlineKeyboardButton(text='Меню', callback_data='back')]
             await bot.send_media_group(user_id, media=photos)  # отправляем фотки
