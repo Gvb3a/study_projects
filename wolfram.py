@@ -68,16 +68,19 @@ def on_key_release(event):  # Function called each time the input field is updat
             else:
                 last_response = pretty_wl_result
         except:
+            wl_result = last_response
             pretty_wl_result = last_response
 
         if pretty_wl_result.startswith('Graphics'):
-            name = f'{randint(1, 2 ** 10)}.png'
+            name = 'plot.png'
             try:
-                wl.Export(name, pretty_wl_result, "PNG")
-                print(f'Graphics: success, {name}')
+                a = wl.Export(name, wl_result, "PNG")
+                print(f'Graphics: {name}')
+                session.evaluate(a)
             except Exception as e:
                 print(f'Graphics: {e}')
-            pretty_wl_result = '-Graphics-'
+            pretty_wl_result = 'Graphics'
+            last_response = pretty_wl_result  # what kind of incomprehensible code I've created
     else:
         pretty_wl_result = last_response
 
@@ -141,25 +144,31 @@ def select_autocomplete(event):
         return 'break'
 
 
-first_wolfram_alpha = True  # The first query takes a very long time (4-5 seconds)
+first_query = True  # The first query takes a very long time (4-5 seconds)
+
+def warning(request):
+    global first_query
+    if request.strip() == '':
+        CTkMessagebox(title="Empty enquiry",
+                      icon="warning",
+                      message="Enter your enquiry!!!")
+        return True
+    elif first_query:
+        msg = CTkMessagebox(title="Info",
+                            message="The first Wolfram Alpha query and the opening of the response window will take "
+                                    "much longer than the following queries (the programme may hang)",
+                            options=['OK', 'Cancel'])
+        if msg.get() == 'OK':
+            first_query = False
+    return first_query
 
 
 def ask_wolfram_alpha():
-    global first_wolfram_alpha, answer_label
+    global first_query, answer_label
     request = text_var.get()
 
-    if request.strip() == '':
-        CTkMessagebox(title="Empty enquiry", icon="warning", message="Enter your enquiry!!!")
+    if warning(request):
         return
-
-    elif first_wolfram_alpha:
-        msg = CTkMessagebox(title="Info", message="The first request will be longer than the next. Please wait.",
-                            options=['OK', 'Cancel'])
-        if msg.get() == 'OK':
-            session.evaluate(wl.WolframAlpha('1'))
-            first_wolfram_alpha = False
-        else:
-            return
 
     a = datetime.now()
     result = session.evaluate(wl.WolframAlpha(request))
@@ -177,7 +186,7 @@ def ask_wolfram_alpha():
 
     if not answer_label:
         answer_label = ctk.CTkLabel(root, text=answer, font=("Arial", 16), wraplength=600, height=40)
-        answer_label.pack(pady=10, padx=10, fill='x', before=autofill_label)
+        answer_label.pack(pady=10, padx=10, fill='x', before=answer_window_btn)
     else:
         answer_label.configure(text=answer)
     resize_window_to_fit()
@@ -186,9 +195,11 @@ def ask_wolfram_alpha():
 
 
 def answer_window():
-    CTkMessagebox(title="In development", icon="info", message="I'll do it tomorrow")
+    request = text_var.get()
+    if warning(request):
+        return
 
-dictionary = ['AbsoluteTiming', 'Solve', 'Sqrt', 'Factor', 'N', 'NSolve', 'ScientificForm', 'Clear']
+dictionary = ['AbsoluteTiming', 'Solve', 'Sqrt', 'Factor', 'N', 'NSolve', 'ScientificForm', 'Clear', 'Plot']
 
 text_var = ctk.StringVar()
 
